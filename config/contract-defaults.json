@@ -1,0 +1,14 @@
+{
+    "_nota": "Dados do Prestador que entram em todos os contratos. Preencha o NIF (NIPC) e a morada completa uma vez aqui; no formulário do contrato podem ser alterados caso a caso.",
+    "prestador": {
+        "nome": "Nonstop Versatility, LDA",
+        "nif": "",
+        "morada": "Coimbra, Portugal",
+        "representante": "Paula Jimenez",
+        "cargo": "Gerente",
+        "email": "info@nonstop-versatility.pt"
+    },
+    "iban": "",
+    "foro": "Coimbra",
+    "local": "Coimbra"
+}
