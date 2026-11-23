@@ -9,11 +9,11 @@ O calendário das **Tarefas** fala com o Google Calendar nos dois sentidos:
 ## Configurar (uma vez)
 
 1. **Base de dados:** correr `database/google.sql` (e `database/tasks.sql`, que tem a coluna da hora) no Supabase.
-2. **Google Cloud** (com a conta `sandra.alphatec@gmail.com`), em <https://console.cloud.google.com>:
-   1. Criar um projeto (por exemplo «Non Stop Leads»).
+2. **Google Cloud** (com a conta `nonstopversatility@gmail.com`), em <https://console.cloud.google.com>:
+   1. Criar um projeto (por exemplo «Non Stop Leads») **com a conta da Non Stop**, nunca com uma conta pessoal.
    2. **APIs e serviços → Biblioteca →** «Google Calendar API» → **Ativar**.
-   3. **Ecrã de consentimento OAuth:** tipo **Externo**; nome da aplicação e email de apoio; em **Utilizadores de teste** adicionar `sandra.alphatec@gmail.com`; em **Âmbitos** adicionar `.../auth/calendar.events`.
-   4. **Credenciais → Criar credenciais → ID de cliente OAuth →** tipo **Aplicação Web**. Em **URIs de redirecionamento autorizados** pôr o endereço da aplicação seguido de `/api/google/callback`, por exemplo `http://localhost:3000/api/google/callback` (e o endereço de produção, quando existir).
+   3. **Ecrã de consentimento OAuth:** tipo **Externo**; nome da aplicação e email de apoio; em **Utilizadores de teste** adicionar `nonstopversatility@gmail.com`; em **Âmbitos** adicionar `.../auth/calendar.events`.
+   4. **Credenciais → Criar credenciais → ID de cliente OAuth →** tipo **Aplicação Web**. Em **URIs de redirecionamento autorizados** pôr o endereço da aplicação seguido de `/api/google/callback`, por exemplo `http://localhost:3000/api/google/callback` (e o de produção: `https://leadintelligence-q06k.onrender.com/api/google/callback`).
    5. Copiar o **ID de cliente** e o **segredo de cliente**.
    6. **Publicar a aplicação** («Em produção», no ecrã de consentimento): enquanto estiver «Em teste», o Google **revoga a ligação ao fim de 7 dias**. Para uso próprio não é preciso verificação: no ecrã de aviso do Google, escolher «Avançadas → Ir para (nome da aplicação)».
 3. **`.env`** (nunca partilhe nem comite estes valores):
@@ -22,7 +22,7 @@ O calendário das **Tarefas** fala com o Google Calendar nos dois sentidos:
    GOOGLE_CLIENT_SECRET=...
    GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
    # opcionais
-   GOOGLE_LOGIN_HINT=sandra.alphatec@gmail.com
+   GOOGLE_LOGIN_HINT=nonstopversatility@gmail.com
    GOOGLE_TIMEZONE=Europe/Lisbon
    GOOGLE_CALENDAR_ID=primary
    GOOGLE_DURACAO_MIN=60
@@ -30,7 +30,7 @@ O calendário das **Tarefas** fala com o Google Calendar nos dois sentidos:
    ```
    `APP_URL` serve para pôr no evento uma ligação de volta ao lead.
 4. Reiniciar o servidor.
-5. Na página **Tarefas**, um **administrador** clica em **Ligar Google Calendar**, autoriza com a conta `sandra.alphatec@gmail.com` e volta à página. Depois, **Sincronizar agora** envia as reuniões e tarefas com hora que já existiam.
+5. Na página **Tarefas**, um **administrador** clica em **Ligar Google Calendar**, autoriza com a conta `nonstopversatility@gmail.com` e volta à página. Depois, **Sincronizar agora** envia as reuniões e tarefas com hora que já existiam.
 
 ## Segurança
 
