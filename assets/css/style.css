@@ -301,6 +301,13 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 400; letter-spacing: -
 .decisores { list-style: none; margin-top: 4px; }
 .decisores li { padding: 8px 0; border-top: 1px solid var(--line); }
 .decisores li:first-child { border-top: 0; }
+.novo-contacto { margin: 8px 0 14px; }
+.novo-contacto summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.novo-contacto form { margin-top: 12px; max-width: 640px; }
+.nc-grelha { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.novo-contacto .campo { margin-bottom: 12px; }
+.novo-contacto .campo input { padding: 11px 13px; }
+@media (max-width: 640px) { .nc-grelha { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .detalhe { margin-left: 0; } .ficha-linha { flex-direction: column; gap: 2px; } }
 .item-radar .item-info b { white-space: normal; }
 .item-radar .desc { margin: 4px 0 2px; font-size: .84rem; color: var(--ink-2); line-height: 1.5; }

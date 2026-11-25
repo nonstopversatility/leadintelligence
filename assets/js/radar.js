@@ -138,7 +138,6 @@
         const f = fichas.get(id);
         if (!f) return `<p class="nota">${esc(t('loading'))}</p>`;
         if (f.erro) return `<div class="erro-ui">${esc(t('detail_error'))}</div>`;
-        if (!f.enriquecida_em) return `<p class="nota">${esc(t('detail_pending'))}</p>`;
 
         const campo = (rotulo, valor) => (valor ? `<div class="ficha-linha"><b>${esc(t(rotulo))}</b><span>${valor}</span></div>` : '');
         const redes = Object.entries(f.redes || {}).filter(([r]) => REDES[r]).map(([r, u]) => ligacao(u, REDES[r])).filter(Boolean).join(' · ');
@@ -148,9 +147,13 @@
             ? `<ul class="decisores">${f.decisores.map((d) => `
                 <li>
                     <div><b>${esc(d.nome)}</b> <span class="nota">${esc(d.cargo || '')}</span> <span class="badge novo">${esc(t('cat_' + d.categoria))}</span>${d.nao_contactar ? ` <span class="badge frio">${esc(t('detail_dnc'))}</span>` : ''}</div>
-                    <div class="nota">${[ligacao(d.linkedin_url, 'LinkedIn'), d.email ? esc(d.email) : '', ligacao(d.fonte_url, t('detail_source')) + ' · ' + esc(new Date(d.recolhido_em).toLocaleDateString(I18N.locale()))].filter(Boolean).join(' · ')}</div>
+                    <div class="nota">${[ligacao(d.linkedin_url, 'LinkedIn'), d.email ? esc(d.email) : '', (d.fonte_url === 'manual' ? esc(t('nc_manual')) : ligacao(d.fonte_url, t('detail_source'))) + ' · ' + esc(new Date(d.recolhido_em).toLocaleDateString(I18N.locale()))].filter(Boolean).join(' · ')}</div>
                 </li>`).join('')}</ul>`
             : `<p class="nota">${esc(t('detail_no_people'))}</p>`;
+
+        const blocoPessoas = `<div class="ficha-linha"><b>${esc(t('detail_people'))}</b></div>${pessoas}${htmlNovoContacto(id)}`;
+        // ficha ainda por enriquecer: avisa, mas mostra as pessoas e deixa acrescentar
+        if (!f.enriquecida_em) return `<p class="nota">${esc(t('detail_pending'))}</p>${blocoPessoas}`;
 
         return `${htmlAnalise(f)}
                 ${campo('detail_type', f.tipo_empresa ? `${esc(t('tipo_' + f.tipo_empresa))}${f.tipo_motivo ? ` <span class="nota">· ${esc(texto(f, 'tipo_motivo'))}</span>` : ''}` : '')}
@@ -158,9 +161,54 @@
                 ${campo('detail_address', f.morada ? esc(f.morada) : '')}
                 ${campo('detail_contacts', contactos)}
                 ${campo('detail_socials', redes)}
-                <div class="ficha-linha"><b>${esc(t('detail_people'))}</b></div>${pessoas}
+                ${blocoPessoas}
                 ${htmlHistorico(f.historico || [])}`;
     }
+
+    // ---------- acrescentar um contacto à mão ----------
+    const novos = new Map();             // por empresa: o que está escrito no formulário (sobrevive a redesenhar a lista)
+    const CAMPOS_CONTACTO = [['nome', 'nc_name', 'text', 90], ['cargo', 'nc_role', 'text', 90], ['email', 'nc_email', 'email', 200], ['linkedin', 'nc_linkedin', 'text', 300]];
+
+    function htmlNovoContacto(id) {
+        if (!podeContactar) return '';
+        const n = novos.get(id) || { valores: {} };
+        const campos = CAMPOS_CONTACTO.map(([nome, chave, tipo, max]) => `<label class="campo"><span>${esc(t(chave))}</span>
+            <input type="${tipo}" name="${nome}" maxlength="${max}" autocomplete="off" value="${esc(n.valores[nome] || '')}"${nome === 'nome' ? ' required' : ''}${nome === 'linkedin' ? ' placeholder="linkedin.com/in/…"' : ''}></label>`).join('');
+        const estado = n.erro ? `<div class="erro-ui" role="alert">${esc(t(n.erro))}</div>` : n.ok ? `<p class="nota" role="status">${esc(t(n.ok))}</p>` : '';
+        return `<details class="novo-contacto" data-novo="${esc(id)}"${n.aberto ? ' open' : ''}><summary>+ ${esc(t('nc_add'))}</summary>
+            <form data-contacto="${esc(id)}" novalidate><div class="nc-grelha">${campos}</div><p class="nota">${esc(t('nc_hint'))}</p>${estado}
+                <button type="submit" class="btn btn-secundario"${n.aGravar ? ' disabled' : ''}>${esc(t('nc_save'))}</button></form></details>`;
+    }
+    const rascunho = (id) => novos.get(id) || novos.set(id, { valores: {} }).get(id);
+
+    $('radar-lista').addEventListener('input', (ev) => {
+        const form = ev.target.closest('form[data-contacto]');
+        if (form) rascunho(form.dataset.contacto).valores[ev.target.name] = ev.target.value;
+    });
+    // "toggle" não sobe na árvore: apanha-se na fase de captura
+    $('radar-lista').addEventListener('toggle', (ev) => {
+        const d = ev.target.closest?.('details[data-novo]');
+        if (d) rascunho(d.dataset.novo).aberto = d.open;
+    }, true);
+
+    const ERROS_CONTACTO = { NOME: 'nc_err_name', CANAL: 'nc_err_channel', EMAIL: 'nc_err_email', LINKEDIN: 'nc_err_linkedin', DUPLICADO: 'nc_err_duplicate' };
+    $('radar-lista').addEventListener('submit', async (ev) => {
+        const form = ev.target.closest('form[data-contacto]');
+        if (!form) return;
+        ev.preventDefault();
+        const id = form.dataset.contacto, n = rascunho(id);
+        if (n.aGravar) return;
+        n.valores = Object.fromEntries(new FormData(form));
+        Object.assign(n, { aberto: true, aGravar: true, erro: null, ok: null });
+        desenharResultados();
+        try {
+            const r = await api(`/api/radar/empresas/${encodeURIComponent(id)}/contactos`, { method: 'POST', body: JSON.stringify(n.valores) });
+            Object.assign(n, { valores: {}, ok: r.email_estado === 'sem_mx' || r.email_estado === 'invalido' ? 'nc_saved_nomx' : 'nc_saved' });
+            try { fichas.set(id, await api('/api/radar/empresas/' + encodeURIComponent(id))); } catch { fichas.delete(id); abertos.delete(id); }
+        } catch (e) { n.erro = ERROS_CONTACTO[e.codigo] || 'nc_err'; }
+        n.aGravar = false;
+        desenharResultados();
+    });
 
     // ---------- análise da oportunidade (Etapa 6) ----------
     // Os textos da análise vêm como { pt, en, es }: mostramos o do idioma escolhido, ou o português.

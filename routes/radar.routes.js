@@ -4,6 +4,7 @@ const { exigirLogin, exigirPapel } = require('../middleware/auth.middleware');
 const { REGIOES, IDIOMAS, SECTORES, SERVICOS } = require('./services/radar.catalog');
 const { CONECTORES } = require('./services/connectors');
 const { calcularPrioridade } = require('./services/priority.service');
+const { adicionarContacto } = require('./services/contacts.service');
 const { iniciarRecolha, LIMITE_POR_DEFEITO, LIMITE_MAXIMO } = require('./services/radar.pipeline');
 
 const router = express.Router();
@@ -124,6 +125,20 @@ router.get('/empresas/:id', async (req, res) => {
         .order('criado_em', { ascending: false }).limit(40);
 
     res.json({ ...empresa, decisores, lead, historico: historico || [] });
+});
+
+// POST /api/radar/empresas/:id/contactos  corpo: { nome, cargo, email, linkedin }
+// Acrescenta à mão uma pessoa de contacto da empresa.
+router.post('/empresas/:id/contactos', exigirPapel('admin', 'comercial'), async (req, res) => {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return res.status(400).json({ erro: 'Identificador inválido.' });
+    try {
+        res.status(201).json(await adicionarContacto(req.params.id, req.body || {}));
+    } catch (erro) {
+        const estado = { NOME: 400, CANAL: 400, EMAIL: 400, LINKEDIN: 400, NAO_ENCONTRADA: 404, DUPLICADO: 409 }[erro.codigo];
+        if (estado) return res.status(estado).json({ erro: erro.message, codigo: erro.codigo });
+        console.error('Erro ao acrescentar um contacto:', erro.message);
+        res.status(500).json({ erro: 'Não foi possível guardar o contacto.' });
+    }
 });
 
 // POST /api/radar/recolher  corpo (opcional): { "limite": 40, "conectores": ["hacker_news"] }
