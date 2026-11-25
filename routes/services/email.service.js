@@ -12,7 +12,9 @@
 //   SMTP_NOME     nome mostrado a quem recebe (por defeito, o nome do utilizador)
 //   SMTP_TESTE    "json": não envia nada, só monta a mensagem (para testes)
 
+const { randomUUID } = require('crypto');
 const nodemailer = require('nodemailer');
+const MailComposer = require('nodemailer/lib/mail-composer');
 const sanitizeHtml = require('sanitize-html');
 
 const configurado = () => !!(process.env.SMTP_TESTE === 'json' || (process.env.SMTP_USER && process.env.SMTP_PASS));
@@ -136,13 +138,49 @@ function montarMensagem({ para, assunto, corpo, html, nomeRemetente, respostaPar
     };
 }
 
+// ---------- cópia na pasta «Enviados» ----------
+// O envio por SMTP não guarda nada na caixa: põe-se uma cópia em «Enviados» por IMAP, para se ver no webmail o que saiu pelo painel.
+// O Gmail já o faz sozinho (guardar outra daria duplicados). EMAIL_COPIA_ENVIADOS=0 desliga.
+function caixaParaCopia() {
+    const e = process.env;
+    if (e.SMTP_TESTE === 'json' || e.EMAIL_COPIA_ENVIADOS === '0' || !e.IMAP_HOST || /gmail\.com$/i.test(e.IMAP_HOST) || !e.SMTP_USER || !e.SMTP_PASS) return null;
+    return { host: e.IMAP_HOST, port: parseInt(e.IMAP_PORT, 10) || 993, secure: true, auth: { user: e.SMTP_USER, pass: e.SMTP_PASS } };
+}
+
+const ligarImap = (caixa) => { const { ImapFlow } = require('imapflow'); return new ImapFlow({ ...caixa, logger: false, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 20000 }); };
+
+// Devolve true (guardada), false (falhou) ou null (não se aplica). Nunca lança erro: a mensagem já foi enviada.
+// "ligar" é opcional e serve para os testes.
+async function guardarCopia(mensagem, { ligar = ligarImap } = {}) {
+    const caixa = caixaParaCopia();
+    if (!caixa) return null;
+    let cliente = null;
+    try {
+        const original = await new MailComposer(mensagem).compile().build();
+        cliente = ligar(caixa);
+        cliente.on?.('error', () => { /* o erro chega pela operação em curso */ });
+        await cliente.connect();
+        const pastas = await cliente.list();
+        const pasta = pastas.find((p) => p.specialUse === '\\Sent') || pastas.find((p) => /^(inbox[./])?(sent|enviados)$/i.test(p.path));
+        if (!pasta) throw new Error('não há pasta de enviados');
+        await cliente.append(pasta.path, original, ['\\Seen'], mensagem.date);
+        return true;
+    } catch (e) {
+        console.error('Cópia em Enviados:', String(e.message).slice(0, 200));
+        return false;
+    } finally { await cliente?.logout().catch(() => {}); }
+}
+
 async function enviar(dados) {
     if (!configurado()) throw new Error('O envio direto não está configurado (faltam SMTP_USER e SMTP_PASS no .env).');
     const mensagem = montarMensagem(dados);
+    // identificador e data fixados aqui: a cópia em «Enviados» tem de ser a mesma mensagem que o cliente recebe
+    mensagem.messageId = `<${randomUUID()}@${(process.env.SMTP_USER || '').split('@')[1] || 'nonstop'}>`.toLowerCase();
+    mensagem.date = new Date();
     let r;
     try { r = await obterTransporte().sendMail(mensagem); }
     catch (e) { throw Object.assign(new Error(`Falha no envio (SMTP ${process.env.SMTP_HOST || 'smtp.gmail.com'}:${process.env.SMTP_PORT || 465}): ${e.message}`), { codigo: classificarErro(e) }); }
-    return { id: r.messageId || null, mensagem };
+    return { id: r.messageId || mensagem.messageId, mensagem, copia: await guardarCopia(mensagem) };
 }
 
-module.exports = { opcoesTransporte, classificarErro, configurado, montarMensagem, enviar, umaLinha, sanitizar, htmlParaTexto, imagensParaAnexos };
+module.exports = { guardarCopia, opcoesTransporte, classificarErro, configurado, montarMensagem, enviar, umaLinha, sanitizar, htmlParaTexto, imagensParaAnexos };

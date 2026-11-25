@@ -11,6 +11,9 @@ O painel lê a caixa de email de onde se envia (`info@nonstop-versatility.pt`, p
 - Um lead que já está noutro estado (por exemplo «proposta enviada») **mantém o estado**; a resposta regista-se na mesma.
 - **Nunca se altera a caixa**: não se marca como lida, não se move, não se apaga. A mesma mensagem **nunca se regista duas vezes**.
 
+## Cópia dos emails enviados pelo painel
+Cada email enviado por **Enviar daqui** fica também na pasta **Enviados** da caixa (por IMAP, já marcado como lido). As respostas dos clientes vão para a mesma caixa (`SMTP_USER`). Para desligar a cópia: `EMAIL_COPIA_ENVIADOS=0`.
+
 ## Respostas que envia pelo webmail
 Se responder a um cliente **diretamente no webmail** (fora do painel), a leitura vê também a pasta **Enviados** (seja qual for o nome, «Sent Mail», «Correio enviado»…) e regista a sua resposta na ficha do lead:
 - fica como **resposta nossa** (saída, tipo «resposta»), com o texto sem a citação;

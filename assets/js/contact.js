@@ -434,7 +434,7 @@ const Contact = (() => {
                 const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/email/${caminho}`, { method: 'POST',
                     // só o envio direto leva a formatação (HTML); nos outros, o utilizador envia texto simples a partir do seu programa
                     body: JSON.stringify({ destinatario: $('ct-dest').value, assunto: m.assunto, corpo: m.texto, html: caminho === 'enviar' ? m.html : undefined, idioma: $('ct-idioma').value, metodo, ia }) });
-                corpo.innerHTML = `<div class="contact-ok"><b>${esc(t('contact_done'))}</b>${r.tarefa ? `<p>${esc(t('contact_followup').replace('{d}', dataCurta(r.tarefa.prazo)))}</p>` : ''}</div>
+                corpo.innerHTML = `<div class="contact-ok"><b>${esc(t('contact_done'))}</b>${r.tarefa ? `<p>${esc(t('contact_followup').replace('{d}', dataCurta(r.tarefa.prazo)))}</p>` : ''}${r.copia === false ? `<p>${esc(t('contact_nocopy'))}</p>` : ''}</div>
                     <div class="contact-acoes"><button type="button" class="btn btn-primary" data-fechar>${esc(t('contact_close'))}</button></div>`;
                 if (aoRegistar) aoRegistar(empresa.id);
             } catch (e) {

@@ -417,8 +417,9 @@ async function enviarEmail(empresaId, dados, utilizador) {
     let corpo = html ? email.htmlParaTexto(html) : String(dados.corpo || '');
     ({ html, corpo } = garantirRemocao({ html, corpo }, IDIOMAS.includes(dados.idioma) ? dados.idioma : idiomaSugerido(ctx.empresa)));
 
-    const enviado = await email.enviar({ para: destinatario.email, assunto: dados.assunto, corpo, html, nomeRemetente: process.env.REMETENTE_NOME || utilizador.nome, respostaPara: utilizador.email });
-    return registarContacto(empresaId, { ...dados, corpo, metodo: 'smtp', externoId: enviado?.id }, utilizador);
+    const enviado = await email.enviar({ para: destinatario.email, assunto: dados.assunto, corpo, html, nomeRemetente: process.env.REMETENTE_NOME || utilizador.nome });          // sem "Responder para": as respostas vão para a caixa de onde se envia, que é a que o painel lê
+    const registo = await registarContacto(empresaId, { ...dados, corpo, metodo: 'smtp', externoId: enviado?.id }, utilizador);
+    return { ...registo, copia: enviado.copia };           // copia: true guardada em Enviados; false não foi possível; null não se aplica
 }
 
 module.exports = {

@@ -10,7 +10,7 @@
 //  - Respostas ENVIADAS PELO GMAIL (fora do painel): lê-se também a pasta «Enviados». Uma mensagem enviada a um cliente que já respondeu fica registada
 //    como resposta nossa (tipo «resposta», saída): a resposta deixa de contar como «por responder» e a tarefa «Dar retorno» fecha. Não muda o estado do lead.
 //    Só conta o que for posterior à resposta do cliente, e nunca duplica o que a plataforma enviou (reconhece-se pelo id ou pela hora).
-//  - Nunca se altera a caixa: não se marca como lida, não se move, não se apaga. A mesma mensagem nunca se regista duas vezes.
+//  - A leitura nunca altera a caixa: não marca como lida, não move, não apaga. (O envio guarda uma cópia em «Enviados»: ver email.service.) A mesma mensagem nunca se regista duas vezes.
 // Usa o SMTP_USER e o SMTP_PASS do .env (a palavra-passe de aplicação do Gmail serve para ler também). Opcionais: IMAP_HOST, IMAP_PORT,
 // EMAIL_RESPOSTAS=0 (desliga), EMAIL_RESPOSTAS_MINUTOS (por defeito 3), EMAIL_RESPOSTAS_DIAS (por defeito 14).
 const { supabaseAdmin } = require('./supabase.service');
