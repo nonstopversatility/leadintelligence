@@ -5,15 +5,12 @@
 const { supabaseAdmin } = require('./supabase.service');
 const o = require('./outreach.service');
 const li = require('./linkedin.service');
-const ig = require('./instagram.service');
-const wa = require('./whatsapp.service');
 
-const CANAIS = ['email', 'linkedin', 'instagram', 'whatsapp'];
-const LIMITES = { email: o.LIMITE_DIARIO, linkedin: li.LIMITE_DIARIO, instagram: ig.LIMITE_DIARIO, whatsapp: wa.LIMITE_DIARIO };
+const CANAIS = ['email', 'linkedin'];
+const LIMITES = { email: o.LIMITE_DIARIO, linkedin: li.LIMITE_DIARIO };
 const pipeline = require('./pipeline.service');
 const ESTADOS_ABERTOS = pipeline.ESTADOS.filter((e) => !pipeline.ESTADOS_FECHADOS.includes(e));
 const DIAS_RESPOSTA = 14;           // respostas recebidas há mais do que isto já não aparecem aqui
-const JANELA_WHATSAPP_MS = 24 * 3600 * 1000;
 const MAX_POR_CANAL = 50;
 const LOTE = 100;
 
@@ -30,32 +27,16 @@ function avaliarCanal(canal, ctx, agora) {
         if (bloqueiosReais(r.bloqueios).length) return null;
         return { tipo: r.tipo, numero: r.numero, acao: r.tipo === 'follow_up' ? 'follow_up' : 'email', destinatario: dest.nome || dest.email };
     }
-    if (canal === 'linkedin') {
-        const { lista, recomendado } = li.listarDestinatarios(c);
-        const dest = lista.find((x) => x.id === recomendado);
-        if (!dest) return null;
-        const r = li.avaliarRegras({ ...c, agora, usadosHoje: 0 });
-        if (bloqueiosReais(r.bloqueios).length) return null;
-        if (r.passos.convite.ok) return { tipo: r.tipo, numero: r.numero, acao: 'convite', destinatario: dest.nome || null };
-        // convite já enviado: só volta a aparecer quando há uma mensagem anterior e o prazo entre mensagens já passou
-        if (r.mensagens >= 1 && r.passos.mensagem.ok) return { tipo: 'follow_up', numero: r.numero, acao: 'mensagem', destinatario: dest.nome || null };
-        return null;
-    }
-    if (canal === 'instagram') {
-        const { lista, recomendado } = ig.listarDestinatarios(c);
-        const dest = lista.find((x) => x.id === recomendado);
-        if (!dest) return null;
-        const r = o.avaliarRegras({ ...c, agora, canal: 'instagram', usadosHoje: 0, limite: LIMITES.instagram });
-        if (bloqueiosReais(r.bloqueios).length) return null;
-        return { tipo: r.tipo, numero: r.numero, acao: r.tipo === 'follow_up' ? 'follow_up' : 'dm', destinatario: dest.conta ? '@' + dest.conta : null };
-    }
-    // whatsapp: a 1.ª mensagem (modelo) e, para quem não respondeu, UM follow-up passados 3 dias úteis
-    const { lista, recomendado } = wa.listarDestinatarios(c);
+    if (canal !== 'linkedin') return null;
+    const { lista, recomendado } = li.listarDestinatarios(c);
     const dest = lista.find((x) => x.id === recomendado);
     if (!dest) return null;
-    const r = wa.avaliarRegras(c, 0, agora);
+    const r = li.avaliarRegras({ ...c, agora, usadosHoje: 0 });
     if (bloqueiosReais(r.bloqueios).length) return null;
-    return { tipo: r.tipo, numero: r.numero, acao: r.tipo === 'follow_up' ? 'follow_up' : 'modelo', destinatario: dest.formatado || null };
+    if (r.passos.convite.ok) return { tipo: r.tipo, numero: r.numero, acao: 'convite', destinatario: dest.nome || null };
+    // convite já enviado: só volta a aparecer quando há uma mensagem anterior e o prazo entre mensagens já passou
+    if (r.mensagens >= 1 && r.passos.mensagem.ok) return { tipo: 'follow_up', numero: r.numero, acao: 'mensagem', destinatario: dest.nome || null };
+    return null;
 }
 
 // leads: [{ id, estado, pontuacao, analise, servico_interesse, empresa_id, empresas: {...} }]
@@ -83,11 +64,9 @@ function montarLista({ leads, decisores = [], interaccoes = [], tarefas = [], us
         // respostas à espera: a última coisa que aconteceu foi uma mensagem DELES, há menos de 14 dias
         const ultima = ints[0];
         if (ultima && ultima.direcao === 'entrada' && ultima.tipo !== 'nota' && agora - new Date(ultima.ocorrida_em).getTime() < DIAS_RESPOSTA * 86400000) {
-            const idade = agora - new Date(ultima.ocorrida_em).getTime();
             responder.push({
                 ...base, canal: ultima.canal, ocorrida_em: ultima.ocorrida_em,
-                excerto: String(ultima.conteudo || '').replace(/\s+/g, ' ').trim().slice(0, 160),
-                janela_whatsapp: ultima.canal === 'whatsapp' && idade < JANELA_WHATSAPP_MS
+                excerto: String(ultima.conteudo || '').replace(/\s+/g, ' ').trim().slice(0, 160)
             });
         }
 
@@ -173,4 +152,4 @@ async function contarRespostas({ agora = Date.now(), cache = true } = {}) {
 }
 const limparCacheContagem = () => { cacheContagem = { ate: 0, valor: null }; };
 
-module.exports = { contarRespostas, limparCacheContagem, contactarHoje, montarLista, avaliarCanal, CANAIS, LIMITES, ESTADOS_ABERTOS, DIAS_RESPOSTA, JANELA_WHATSAPP_MS };
+module.exports = { contarRespostas, limparCacheContagem, contactarHoje, montarLista, avaliarCanal, CANAIS, LIMITES, ESTADOS_ABERTOS, DIAS_RESPOSTA };

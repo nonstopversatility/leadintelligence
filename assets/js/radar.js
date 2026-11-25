@@ -130,7 +130,7 @@
     // ---------- ficha da empresa (decisores e contactos que o site dela publica) ----------
     const abertos = new Set();            // empresas com a ficha aberta
     const fichas = new Map();             // id -> dados já carregados (ou { erro: true })
-    const REDES = { linkedin: 'LinkedIn', twitter: 'X', github: 'GitHub', instagram: 'Instagram', youtube: 'YouTube', facebook: 'Facebook' };
+    const REDES = { linkedin: 'LinkedIn', twitter: 'X', github: 'GitHub', youtube: 'YouTube', facebook: 'Facebook' };
     const httpSeguro = (url) => (/^https?:\/\//i.test(url || '') ? url : null);
     const ligacao = (url, texto) => (httpSeguro(url) ? `<a class="link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(texto)}</a>` : '');
 
@@ -142,9 +142,7 @@
 
         const campo = (rotulo, valor) => (valor ? `<div class="ficha-linha"><b>${esc(t(rotulo))}</b><span>${valor}</span></div>` : '');
         const redes = Object.entries(f.redes || {}).filter(([r]) => REDES[r]).map(([r, u]) => ligacao(u, REDES[r])).filter(Boolean).join(' · ');
-        // o WhatsApp só se mostra se for um número internacional (+ e dígitos): é o que o enriquecimento guarda
-        const whatsapp = /^\+\d{8,15}$/.test(f.redes?.whatsapp || '') ? `WhatsApp ${esc(f.redes.whatsapp)}` : '';
-        const contactos = [f.email_geral ? esc(f.email_geral) : '', f.telefone ? esc(f.telefone) : '', whatsapp].filter(Boolean).join(' · ');
+        const contactos = [f.email_geral ? esc(f.email_geral) : '', f.telefone ? esc(f.telefone) : ''].filter(Boolean).join(' · ');
 
         const pessoas = f.decisores.length
             ? `<ul class="decisores">${f.decisores.map((d) => `
@@ -293,7 +291,7 @@
     }
 
     // Abrir/fechar a ficha de uma empresa (carrega os dados só na primeira vez)
-    // Botão "Contact": abre o menu de canais (Email, LinkedIn, Instagram, WhatsApp)
+    // Botão "Contact": abre o menu de canais (Email, LinkedIn)
     $('radar-lista').addEventListener('click', (ev) => {
         const b = ev.target.closest('[data-contactar]');
         if (!b) return;

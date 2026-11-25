@@ -64,10 +64,6 @@
         return `<section class="card"><div class="card-head"><h2>${esc(t('st_s_integrations'))}</h2></div><div class="card-body"><p class="nota">${esc(t('st_int_hint'))}</p><div class="st-ints">
             ${linha(t('st_int_ai'), estado(i.ia.configurada))}
             ${linha(t('st_int_email'), `${estado(i.email.configurado)} <span class="nota">${esc(t('st_int_server'))}: ${esc(i.email.servidor)}:${i.email.porta}</span>`)}
-            ${linha(t('st_int_wa'), estado(i.whatsapp.configurado))}
-            ${linha(t('st_int_wa_webhook'), estado(i.whatsapp.webhook))}
-            ${linha(t('st_int_wa_waba'), estado(i.whatsapp.waba))}
-            ${linha(t('st_int_wa_version'), `<code>${esc(i.whatsapp.versao_api)}</code>`)}
             ${linha(t('st_int_url'), i.endereco.url ? `<code>${esc(i.endereco.url)}</code>` : `<span class="chip atrasada">${esc(t('st_int_url_none'))}</span>`)}</div>
             ${i.endereco.local ? `<div class="erro-ui">${esc(t('st_int_url_local'))}</div>` : ''}
             <h3 class="dt-h3">${esc(t('st_int_models'))}</h3><ul class="st-modelos">${modelos}</ul></div></section>`;
@@ -76,7 +72,7 @@
     function limitesHtml() {
         if (!limites) return '';
         const l = limites;
-        const linhas = l.diarios.map((c) => `<tr><td>${esc(c.canal === 'whatsapp_respostas' ? t('st_lim_wa_replies') : t('ch_' + c.canal))}</td><td class="num"><b>${c.valor}</b></td><td><code>${esc(c.variavel)}</code></td></tr>`).join('');
+        const linhas = l.diarios.map((c) => `<tr><td>${esc(t('ch_' + c.canal))}</td><td class="num"><b>${c.valor}</b></td><td><code>${esc(c.variavel)}</code></td></tr>`).join('');
         const regra = (rot, v) => `<li><span>${esc(rot)}</span><b>${v}</b></li>`;
         return `<section class="card"><div class="card-head"><h2>${esc(t('st_s_limits'))}</h2></div><div class="card-body"><p class="nota">${esc(t('st_lim_hint'))}</p>
             <div class="tabela-rolar"><table class="tabela st-tabela"><thead><tr><th>${esc(t('st_lim_channel'))}</th><th class="num">${esc(t('st_lim_value'))}</th><th>${esc(t('st_lim_var'))}</th></tr></thead><tbody>${linhas}</tbody></table></div>

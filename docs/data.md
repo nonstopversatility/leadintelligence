@@ -9,7 +9,7 @@ Não é preciso correr nenhum SQL: usa as tabelas que já existem.
 3. **Importar N empresas novas.** O servidor volta a analisar o ficheiro ao gravar (não confia na pré-visualização do browser).
 
 **Colunas** (só o nome é obrigatório; os nomes aceites vêm em português, inglês e espanhol, com ou sem acentos):
-`nome`, `site`, `país`, `idioma`, `setor`, `cidade`, `descrição`, `email`, `telefone`, `linkedin`, `instagram`, `whatsapp`,
+`nome`, `site`, `país`, `idioma`, `setor`, `cidade`, `descrição`, `email`, `telefone`, `linkedin`,
 e a pessoa de contacto: `contacto`, `cargo`, `email do contacto`, `linkedin do contacto`. Colunas desconhecidas são ignoradas (e listadas).
 
 **Regras**
@@ -33,5 +33,5 @@ uma fonte desligada deixa de ser lida nas recolhas seguintes (e, se todas estive
 ## Não contactar
 Empresas e pessoas a quem a plataforma nunca escreve (as regras de envio recusam-nas em todos os canais).
 - **Acrescentar uma empresa:** procura pelo nome. Os leads dela passam a «Não contactar» e as tarefas abertas fecham-se.
-- Aparecem também as que pediram **PARAR no WhatsApp** (marcadas automaticamente) e as marcadas à mão, com a data e como.
+- Aparecem também as que pediram por email para ser removidas (marcadas automaticamente) e as marcadas à mão, com a data e como.
 - **Remover** só o **admin** pode (levantar um bloqueio pode ir contra o pedido de uma pessoa). Os leads que estavam em «Não contactar» voltam a «Analisado».

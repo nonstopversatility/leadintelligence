@@ -1,6 +1,6 @@
 # Propostas comerciais (página Documentos)
 
-A Non Stop escolhe um cliente, preenche preços e condições, vê a proposta ao vivo e descarrega o PDF para enviar por email ou WhatsApp.
+A Non Stop escolhe um cliente, preenche preços e condições, vê a proposta ao vivo e descarrega o PDF para enviar por email.
 O modelo parte da proposta antiga (`docs/old_proposal.pdf`) e acrescenta: resumo à medida, objetivos, serviços com entregáveis, tabela de investimento
 com totais e desconto, condições, passos, termos e bloco de assinatura. Sai em português, inglês ou espanhol.
 

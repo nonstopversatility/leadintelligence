@@ -15,8 +15,6 @@ const { normalizarNome, normalizarNomePessoa, normalizarEmail, validarEmail, nor
 const { normalizarDominio } = require('./website.service');
 const { regiaoDoPais, SECTORES } = require('./radar.catalog');
 const linkedin = require('./linkedin.service');
-const instagram = require('./instagram.service');
-const whatsapp = require('./whatsapp.service');
 
 const LOTE = 100;
 const MAX_PREVIA = 200;
@@ -37,15 +35,13 @@ const COLUNAS = {
     email: ['email', 'emailgeral', 'emaildaempresa', 'companyemail', 'correo'],
     telefone: ['telefone', 'phone', 'tel', 'telefono'],
     linkedin: ['linkedin', 'linkedinempresa', 'companylinkedin'],
-    instagram: ['instagram'],
-    whatsapp: ['whatsapp'],
     contacto_nome: ['contactonome', 'contactname', 'nomecontacto', 'pessoa', 'person', 'fundador', 'founder', 'ceo', 'contacto', 'contact'],
     contacto_cargo: ['contactocargo', 'cargo', 'role', 'title', 'jobtitle', 'contactrole', 'puesto'],
     contacto_email: ['contactoemail', 'emailcontacto', 'contactemail', 'personemail', 'emailpessoa'],
     contacto_linkedin: ['contactolinkedin', 'linkedinpessoa', 'linkedincontacto', 'personlinkedin', 'contactlinkedin']
 };
 const CAMPOS_PT = { nome: 'nome', website: 'site', pais: 'país', idioma: 'idioma', setor: 'setor', cidade: 'cidade', descricao: 'descrição', email: 'email', telefone: 'telefone',
-    linkedin: 'LinkedIn', instagram: 'Instagram', whatsapp: 'WhatsApp', contacto_nome: 'contacto (nome)', contacto_cargo: 'contacto (cargo)', contacto_email: 'contacto (email)', contacto_linkedin: 'contacto (LinkedIn)' };
+    linkedin: 'LinkedIn', contacto_nome: 'contacto (nome)', contacto_cargo: 'contacto (cargo)', contacto_email: 'contacto (email)', contacto_linkedin: 'contacto (LinkedIn)' };
 
 function mapearColunas(cabecalho) {
     const mapa = {}, ignoradas = [];
@@ -127,8 +123,6 @@ function normalizarLinha(celulas, mapa) {
 
     const redes = {};
     if (limpar(v('linkedin'), 300)) { const u = linkedin.urlPagina(limpar(v('linkedin'), 300)); if (u) redes.linkedin = u; else avisos.push('LinkedIn da empresa inválido (tem de ser linkedin.com/company/…)'); }
-    if (limpar(v('instagram'), 300)) { const c = instagram.contaInstagram(limpar(v('instagram'), 300).replace(/^@/, 'https://www.instagram.com/')); if (c) redes.instagram = c.url; else avisos.push('Instagram inválido'); }
-    if (limpar(v('whatsapp'), 40)) { const n = whatsapp.numeroWhatsapp(limpar(v('whatsapp'), 40)); if (n) redes.whatsapp = n.numero; else avisos.push('WhatsApp inválido (precisa do indicativo, ex.: +351…)'); }
 
     let contacto = null;
     const cn = limpar(v('contacto_nome'), 90);

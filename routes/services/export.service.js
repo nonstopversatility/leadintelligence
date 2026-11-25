@@ -38,8 +38,8 @@ const COLUNAS = {
     empresas: [
         { titulo: 'Empresa', chave: 'nome' }, { titulo: 'Site', chave: 'website' }, { titulo: 'País', chave: 'pais' }, { titulo: 'Cidade', chave: 'cidade' }, { titulo: 'Setor', chave: 'sector' },
         { titulo: 'Idioma', chave: 'idioma' }, { titulo: 'Tipo', chave: 'tipo_empresa' }, { titulo: 'Email geral', chave: 'email_geral' }, { titulo: 'Estado do email', chave: 'email_geral_estado' },
-        { titulo: 'Telefone', chave: 'telefone' }, { titulo: 'LinkedIn', valor: (e) => redes(e, 'linkedin') }, { titulo: 'Instagram', valor: (e) => redes(e, 'instagram') },
-        { titulo: 'WhatsApp', valor: (e) => redes(e, 'whatsapp') }, { titulo: 'Descrição', valor: (e) => e.sobre || e.descricao }, { titulo: 'Notícia de origem', chave: 'origem_titulo' },
+        { titulo: 'Telefone', chave: 'telefone' }, { titulo: 'LinkedIn', valor: (e) => redes(e, 'linkedin') },
+        { titulo: 'Descrição', valor: (e) => e.sobre || e.descricao }, { titulo: 'Notícia de origem', chave: 'origem_titulo' },
         { titulo: 'Ligação de origem', chave: 'origem_url' }, { titulo: 'Fonte', valor: (e) => e.fonte_nome }, { titulo: 'Não contactar', valor: (e) => !!e.nao_contactar }, { titulo: 'Criada em', valor: (e) => dia(e.criado_em) }
     ],
     decisores: [

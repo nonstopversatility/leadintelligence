@@ -13,7 +13,7 @@ Barra: **+ Criar**, contadores (Atrasadas, Hoje, Em aberto), pesquisa (título o
 
 ## Tarefas automáticas
 
-Quando um lead muda de estado (no quadro dos Leads, por resposta registada, por resposta de WhatsApp, ao marcar a proposta como enviada ou ao fechar o negócio), a plataforma cria a tarefa seguinte e fecha as que deixaram de fazer sentido (`routes/services/task-automation.service.js`).
+Quando um lead muda de estado (no quadro dos Leads, por resposta registada, ao marcar a proposta como enviada ou ao fechar o negócio), a plataforma cria a tarefa seguinte e fecha as que deixaram de fazer sentido (`routes/services/task-automation.service.js`).
 
 | Estado do lead | Tarefa criada | Prazo |
 |---|---|---|

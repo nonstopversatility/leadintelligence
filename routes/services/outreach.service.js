@@ -366,7 +366,7 @@ async function registarContacto(empresaId, dados, utilizador) {
 
 // O que acontece depois de qualquer contacto registado (email ou LinkedIn): o lead passa a "contactado",
 // o follow-up em aberto fica concluído e agenda-se o seguinte, se ainda houver direito a ele.
-// opcoes (opcional): { diasUteis, tarefaAte, titulo }. O WhatsApp agenda o follow-up para daqui a 3 dias úteis e só depois da 1.ª mensagem.
+// opcoes (opcional): { diasUteis, tarefaAte, titulo }.
 async function aposContacto(ctx, regras, utilizador, opcoes = {}) {
     // o lead passa a "contactado" (o histórico automático regista a mudança com a origem "contacto")
     let estado = ctx.lead.estado;

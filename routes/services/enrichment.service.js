@@ -94,7 +94,6 @@ const PERFIL_REDE = {
     linkedin: /^https:\/\/(?:[\w-]+\.)?linkedin\.com\/(?:company|showcase|school)\/[\w%.-]+\/?$/i,
     twitter: /^https:\/\/(?:www\.)?(?:twitter|x)\.com\/(?!intent\b|share\b|home\b|search\b|i\b)[A-Za-z0-9_]{1,15}\/?$/i,
     github: /^https:\/\/(?:www\.)?github\.com\/[\w.-]+(?:\/[\w.-]+)?\/?$/i,
-    instagram: /^https:\/\/(?:www\.)?instagram\.com\/(?!p\/|reel\/|explore\/|stories\/)[\w.]+\/?$/i,
     youtube: /^https:\/\/(?:www\.)?youtube\.com\/(?:@[\w.-]+|channel\/[\w-]+|c\/[\w.-]+|user\/[\w.-]+)\/?$/i,
     facebook: /^https:\/\/(?:www\.)?facebook\.com\/(?!tr\b|sharer\b|share\b|dialog\b|plugins\b|policies\b)[\w.-]+\/?$/i
 };
@@ -104,18 +103,6 @@ function limparRede(rede, url) {
     if (!PERFIL_REDE[rede]) return null;
     const limpo = String(url).replace(/&amp;/g, '&').replace(/[.,;]+$/, '').replace(/^http:\/\//i, 'https://').split(/[?#]/)[0];
     return PERFIL_REDE[rede].test(limpo) ? limpo : null;
-}
-
-// WhatsApp que a PRÓPRIA empresa publica no site (botão "falar no WhatsApp"): ligações wa.me/<número> ou
-// api.whatsapp.com/send?phone=<número>. O número tem de ser internacional e válido; nunca se adivinha nem se converte um telefone fixo.
-const LIGACAO_WHATSAPP = /(?:https?:\/\/(?:wa\.me\/|(?:api|web)\.whatsapp\.com\/send\/?\?(?:[^"'\s<>]*?[&?;])?phone=)|whatsapp:\/\/send\/?\?(?:[^"'\s<>]*?[&;])?phone=)\+?(\d{8,15})/gi;
-function numerosWhatsapp(html) {
-    const numeros = [];
-    for (const m of String(html).matchAll(LIGACAO_WHATSAPP)) {
-        const p = parsePhoneNumberFromString('+' + m[1]);
-        if (p && p.isValid()) numeros.push(p.number);
-    }
-    return [...new Set(numeros)];
 }
 
 // Emails "gerais" que valem como contacto da empresa (e não um departamento ou pessoa)
@@ -128,13 +115,11 @@ function extrairDados(html, dominioBase) {
     for (const m of html.matchAll(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g)) emails.add(m[0].toLowerCase());
     for (const m of html.matchAll(/tel:([+\d][\d\s().-]{6,})/gi)) telefones.add(m[1].trim());
 
-    for (const m of html.matchAll(/https?:\/\/(?:[\w-]+\.)?(linkedin\.com|twitter\.com|x\.com|github\.com|instagram\.com|youtube\.com|facebook\.com)\/[^\s"'<>)]+/gi)) {
+    for (const m of html.matchAll(/https?:\/\/(?:[\w-]+\.)?(linkedin\.com|twitter\.com|x\.com|github\.com|youtube\.com|facebook\.com)\/[^\s"'<>)]+/gi)) {
         const rede = m[1].toLowerCase().replace('.com', '').replace(/^x$/, 'twitter');
         const url = limparRede(rede, m[0]);
         if (url) redes[rede] ||= url;
     }
-    const whatsapp = numerosWhatsapp(html);
-    if (whatsapp.length) redes.whatsapp ||= whatsapp[0];
     // ligações de LinkedIn de PESSOAS (texto âncora + endereço), para associar a quem aparece na equipa
     for (const m of html.matchAll(/<a\b[^>]*?href=["'](https?:\/\/(?:[\w-]+\.)?linkedin\.com\/in\/[^"'?#]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi)) {
         pessoas.push({ url: m[1], texto: limparTexto(m[2], 80) });
@@ -370,4 +355,4 @@ async function enriquecerPendentes({ limite = 20, gravar = true, aoProgresso } =
     return resumo;
 }
 
-module.exports = { enriquecerEmpresa, enriquecerPendentes, escolherPaginas, extrairDados, validar, limparRede, numerosWhatsapp, EMAIL_GERAL, MODELO };
+module.exports = { enriquecerEmpresa, enriquecerPendentes, escolherPaginas, extrairDados, validar, limparRede, EMAIL_GERAL, MODELO };

@@ -15,7 +15,7 @@
     let contactar = null;        // /api/pipeline/hoje: o que contactar hoje, por canal, e as respostas à espera; null se falhar (usa a lista antiga)
     let separadorHoje = null;    // separador escolhido; por defeito o primeiro com trabalho
     const podeEditar = !!utilizador && ['admin', 'comercial'].includes(utilizador.papel);
-    const CANAIS_HOJE = ['email', 'linkedin', 'instagram', 'whatsapp'];
+    const CANAIS_HOJE = ['email', 'linkedin'];
 
     // ---------- saudação e data ----------
     function cabecalho() {
@@ -84,8 +84,8 @@
         return `<li class="ct-item" data-lead="${esc(x.lead_id)}">
             <div class="ct-info"><b>${esc(x.empresa.nome || t('unnamed'))}</b><span class="nota">${esc(t('ch_' + x.canal))} · ${esc(haHoje(x.ocorrida_em))}</span>
                 ${x.excerto ? `<span class="ct-excerto">“${esc(x.excerto)}”</span>` : ''}
-                <span class="ct-chips">${x.janela_whatsapp ? `<span class="chip chip-ok">${esc(t('ct_wa_window'))}</span>` : ''}${chipTarefa(x)}</span></div>
-            <div class="ct-acoes"><button type="button" class="btn btn-secundario" data-abrir>${esc(x.janela_whatsapp ? t('ct_btn_reply') : t('ct_btn_open'))}</button></div></li>`;
+                <span class="ct-chips">${chipTarefa(x)}</span></div>
+            <div class="ct-acoes"><button type="button" class="btn btn-secundario" data-abrir>${esc(t('ct_btn_open'))}</button></div></li>`;
     }
     function prioridadesPorCanal() {
         const c = contactar;

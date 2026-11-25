@@ -1,7 +1,7 @@
 // «Não contactar» (Etapa 8): a lista de empresas e pessoas a quem a plataforma nunca escreve.
 //  - Uma empresa marcada fica bloqueada em TODOS os canais (as regras de envio recusam-na) e os seus leads passam a «não contactar».
 //  - Uma pessoa marcada deixa de aparecer como destinatária.
-//  - «Desde quando» e «como» (PARAR no WhatsApp, marcada à mão, etc.) vêm do histórico automático.
+//  - «Desde quando» e «como» (pedido de remoção, marcada à mão, etc.) vêm do histórico automático.
 //  - Marcar é fácil; REMOVER só o admin pode (levantar um bloqueio pode ir contra o pedido de uma pessoa).
 const { supabaseAdmin } = require('./supabase.service');
 const { escaparPesquisa } = require('./pipeline.service');

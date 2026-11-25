@@ -9,7 +9,7 @@
 // calcular() é uma função pura (testável); relatorioMensal() vai buscar os dados à base de dados.
 const { supabaseAdmin } = require('./supabase.service');
 
-const CANAIS = ['email', 'linkedin', 'instagram', 'whatsapp'];
+const CANAIS = ['email', 'linkedin'];
 const ESTADOS_FUNIL = ['contactado', 'respondeu', 'reuniao_agendada', 'proposta_enviada', 'proposta_aceite', 'negocio_fechado'];
 const CONVERSOES = [['contactado', 'respondeu'], ['respondeu', 'reuniao_agendada'], ['reuniao_agendada', 'proposta_enviada'], ['proposta_enviada', 'proposta_aceite'], ['proposta_aceite', 'negocio_fechado']];
 const PERDIDOS = ['proposta_recusada', 'oportunidade_perdida'];

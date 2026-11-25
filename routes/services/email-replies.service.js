@@ -230,7 +230,7 @@ async function verificar({ leitor } = {}) {
             }
         }
     } catch (e) {
-        r.erro = e.codigo === 'CONFIG' ? e.message : /auth|credentials|invalid|login/i.test(String(e.message)) ? 'A caixa recusou o acesso: confirme o SMTP_USER e o SMTP_PASS (palavra-passe de aplicação).' : 'Não foi possível ler a caixa de email.';
+        r.erro = e.codigo === 'CONFIG' ? e.message : /auth|credentials|invalid|login/i.test(String(e.message)) ? 'A caixa recusou o acesso: confirme o SMTP_USER e o SMTP_PASS.' : 'Não foi possível ler a caixa de email.';
         console.error('Leitura das respostas por email:', String(e.message).slice(0, 200));
     } finally { aCorrer = false; ultimo = r; }
     return r;

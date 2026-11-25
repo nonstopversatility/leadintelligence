@@ -1,17 +1,16 @@
 /* contact.js: botão "Contact", menu de canais e janela de email (usado pelo Radar).
-   Canais: Email (ativo), LinkedIn, Instagram e WhatsApp (em breve: um canal de cada vez).
+   Canais: Email e LinkedIn.
    Fluxo do email: escolher destinatário -> a IA escreve o rascunho -> o utilizador revê ->
-   envia daqui (se o SMTP estiver ligado) ou abre no seu email / Gmail / copia -> confirma -> fica registado. */
+   envia daqui (se o SMTP estiver ligado) ou abre no seu email / caixa de entrada / copia -> confirma -> fica registado. */
 
 const Contact = (() => {
     const { api, esc } = NS;
     const t = (k) => I18N.t(k);
     const CANAIS = [
         { id: 'email', nome: 'Email', ativo: true, icone: '<path d="M4 6h16v12H4z"/><path d="M4 7l8 6 8-6"/>' },
-        { id: 'linkedin', nome: 'LinkedIn', ativo: true, icone: '<path d="M6 9v10M6 5.5v.01M10 19v-6a3 3 0 0 1 6 0v6M10 12v7"/>' },
-        { id: 'instagram', nome: 'Instagram', ativo: true, icone: '<rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.5"/><path d="M17 7v.01"/>' },
-        { id: 'whatsapp', nome: 'WhatsApp', ativo: true, icone: '<path d="M5 19l1.2-3.6A7.5 7.5 0 1 1 9 18z"/>' }
+        { id: 'linkedin', nome: 'LinkedIn', ativo: true, icone: '<path d="M6 9v10M6 5.5v.01M10 19v-6a3 3 0 0 1 6 0v6M10 12v7"/>' }
     ];
+    const CAIXA_ENTRADA = 'https://webmail.nonstop-versatility.pt/';     // o webmail da empresa
     const IDIOMAS = [['en', 'English'], ['pt', 'Português'], ['es', 'Español']];
 
     // ---------- editor com formatação ----------
@@ -37,7 +36,7 @@ const Contact = (() => {
     }
     const textoParaHtml = (txt) => String(txt).split(/\n{2,}/).map((p) => `<p>${escapar(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
 
-    // Texto simples do que está no editor (para o email e o Gmail, que só aceitam texto): parágrafos, listas e ligações
+    // Texto simples do que está no editor (para o email, quando só se pode levar texto): parágrafos, listas e ligações
     function paraTexto(no) {
         let s = '';
         no.childNodes.forEach((n) => {
@@ -227,8 +226,6 @@ const Contact = (() => {
             fecharMenu();
             if (b.dataset.canal === 'email') abrirEmail(empresa, aoRegistar);
             else if (b.dataset.canal === 'linkedin') abrirLinkedin(empresa, aoRegistar);
-            else if (b.dataset.canal === 'instagram') abrirInstagram(empresa, aoRegistar);
-            else if (b.dataset.canal === 'whatsapp') abrirWhatsapp(empresa, aoRegistar);
         });
         setTimeout(() => { document.addEventListener('click', foraDoMenu, true); document.addEventListener('keydown', teclaMenu); }, 0);
         menu.querySelector('button:not([disabled])')?.focus();
@@ -315,7 +312,7 @@ const Contact = (() => {
             <div class="contact-acoes" id="ct-acoes">
                 ${estado.smtp ? `<button type="button" class="btn btn-primary" id="ct-enviar">${esc(t('contact_send'))}</button>` : ''}
                 <button type="button" class="btn btn-secundario" id="ct-mailto">${esc(t('contact_mailto'))}</button>
-                <button type="button" class="btn btn-secundario" id="ct-gmail">${esc(t('contact_gmail'))}</button>
+                <button type="button" class="btn btn-secundario" id="ct-caixa">${esc(t('contact_inbox'))}</button>
                 <button type="button" class="btn btn-secundario" id="ct-copiar">${esc(t('contact_copy'))}</button>
                 <button type="button" class="btn-link" id="ct-reescrever">${esc(t('contact_rewrite'))}</button>
             </div>
@@ -411,12 +408,23 @@ const Contact = (() => {
         };
 
         // depois de abrir/copiar fora da plataforma, perguntamos se foi mesmo enviado (só então se regista)
-        function perguntarSeEnviou(metodo) {
-            aviso(`<div class="contact-confirmar"><b>${esc(t('contact_sent_q'))}</b>
+        function perguntarSeEnviou(metodo, dica = '') {
+            aviso(`${dica ? `<p class="nota">${esc(dica)}</p>` : ''}<div class="contact-confirmar"><b>${esc(t('contact_sent_q'))}</b>
                 <button type="button" class="btn btn-primary" id="ct-sim">${esc(t('contact_sent_yes'))}</button>
                 <button type="button" class="btn btn-secundario" id="ct-nao">${esc(t('contact_sent_no'))}</button></div>`);
             $('ct-nao').addEventListener('click', () => aviso(''));
             $('ct-sim').addEventListener('click', () => registar(metodo));
+        }
+
+        // copia o texto COM formatação e também em texto simples; devolve false se o browser não deixar
+        async function copiar(m) {
+            try {
+                if (window.ClipboardItem && navigator.clipboard.write) {
+                    await navigator.clipboard.write([new ClipboardItem({
+                        'text/html': new Blob([m.html], { type: 'text/html' }), 'text/plain': new Blob([`${m.assunto}\n\n${m.texto}`], { type: 'text/plain' }) })]);
+                } else { await navigator.clipboard.writeText(`${m.assunto}\n\n${m.texto}`); }
+                return true;
+            } catch { return false; }
         }
 
         async function registar(metodo, caminho = 'registar') {
@@ -441,21 +449,17 @@ const Contact = (() => {
             location.href = `mailto:${encodeURIComponent(m.para)}?subject=${encodeURIComponent(m.assunto)}&body=${encodeURIComponent(m.texto)}`;
             perguntarSeEnviou('mailto');
         });
-        $('ct-gmail')?.addEventListener('click', () => {
+        // O webmail não deixa pré-preencher a mensagem: copia-se o texto, abre-se a caixa de entrada e o utilizador cola
+        $('ct-caixa')?.addEventListener('click', async () => {
             const m = mensagemPronta(); if (!m) return;
-            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.para)}&su=${encodeURIComponent(m.assunto)}&body=${encodeURIComponent(m.texto)}`, '_blank', 'noopener');
-            perguntarSeEnviou('gmail');
+            const copia = copiar(m);                                                   // começa já, enquanto esta janela tem o foco
+            window.open(CAIXA_ENTRADA, '_blank', 'noopener,noreferrer');                // no próprio clique (senão o browser bloqueia)
+            const copiou = await copia;
+            perguntarSeEnviou('copiado', t(copiou ? 'contact_inbox_hint' : 'contact_inbox_nocopy'));
         });
         $('ct-copiar')?.addEventListener('click', async () => {
             const m = mensagemPronta(); if (!m) return;
-            try {
-                // copia o texto COM formatação (para colar no Gmail ou no Outlook) e também em texto simples
-                if (window.ClipboardItem && navigator.clipboard.write) {
-                    await navigator.clipboard.write([new ClipboardItem({
-                        'text/html': new Blob([m.html], { type: 'text/html' }), 'text/plain': new Blob([`${m.assunto}\n\n${m.texto}`], { type: 'text/plain' }) })]);
-                } else { await navigator.clipboard.writeText(`${m.assunto}\n\n${m.texto}`); }
-                aviso(`<p class="nota">${esc(t('contact_copied'))}</p>`);
-            } catch { /* sem permissão de área de transferência: o utilizador copia à mão */ }
+            if (await copiar(m)) aviso(`<p class="nota">${esc(t('contact_copied'))}</p>`);
             setTimeout(() => perguntarSeEnviou('copiado'), 600);
         });
         // enviar daqui: pede confirmação, porque uma mensagem enviada não se pode desfazer
@@ -625,261 +629,5 @@ const Contact = (() => {
     }
 
 
-    // ---------- janela do Instagram (DM) ----------
-    // A IA escreve a DM; o botão copia o texto e abre o perfil num popup; o utilizador cola, envia e confirma aqui.
-    // Nada é enviado nem escrito por script (automatizar o Instagram viola os termos da rede).
-    async function abrirInstagram(empresa, aoRegistar) {
-        const titulo = t('ig_title').replace('{empresa}', empresa.nome);
-        const fundo = document.createElement('div');
-        fundo.className = 'contact-fundo';
-        fundo.innerHTML = `<div class="contact-modal" role="dialog" aria-modal="true" aria-label="${esc(titulo)}" tabindex="-1">
-            <div class="contact-cab"><h3>${esc(titulo)}</h3>
-                <button type="button" class="contact-x" data-fechar aria-label="${esc(t('contact_close'))}">×</button></div>
-            <div class="contact-corpo" id="contact-corpo"><p class="nota">${esc(t('contact_loading'))}</p></div></div>`;
-        document.body.appendChild(fundo);
-        document.body.classList.add('modal-aberto');
-        const corpo = fundo.querySelector('#contact-corpo');
-        fundo.querySelector('.contact-modal').focus();
-
-        const fechar = () => { fundo.remove(); document.body.classList.remove('modal-aberto'); document.removeEventListener('keydown', tecla); };
-        const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
-        document.addEventListener('keydown', tecla);
-        fundo.addEventListener('click', (ev) => { if (ev.target === fundo || ev.target.closest('[data-fechar]')) fechar(); });
-        const fecharBtn = `<div class="contact-acoes"><button type="button" class="btn btn-secundario" data-fechar>${esc(t('contact_close'))}</button></div>`;
-
-        let estado;
-        try { estado = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/instagram`); }
-        catch { corpo.innerHTML = `<div class="erro-ui">${esc(t('contact_error'))}</div>${fecharBtn}`; return; }
-
-        if (!estado.destinatarios.length) { corpo.innerHTML = `<p>${esc(t('ig_none'))}</p>${fecharBtn}`; return; }
-        if (estado.bloqueios.length) { corpo.innerHTML = `${estado.bloqueios.map((b) => `<div class="erro-ui">${esc(textoBloqueio(b))}</div>`).join('')}${fecharBtn}`; return; }
-
-        const conta = estado.destinatarios[0];
-        const tipoTxt = estado.tipo === 'follow_up' ? t('contact_type_follow').replace('{n}', estado.numero - 1) : t('contact_type_first');
-        corpo.innerHTML = `
-            <p class="nota contact-tipo">${esc(tipoTxt)} · ${esc(t('ig_quota').replace('{u}', estado.limite_diario.usados).replace('{l}', estado.limite_diario.limite))}</p>
-            <p class="ig-conta"><b>${esc(t('ig_account'))}:</b> @${esc(conta.conta)}</p>
-            <label class="campo"><span>${esc(t('contact_lang'))}</span><select id="ig-idioma">${IDIOMAS.map(([c, n]) => `<option value="${c}" ${c === estado.empresa.idioma ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-            <section class="li-passo"><h4>${esc(t('ig_step'))}</h4><p class="nota">${esc(t('ig_step_hint'))}</p>
-                <textarea id="ig-mensagem" rows="12" maxlength="1500" aria-label="${esc(t('ig_step'))}"></textarea>
-                <div class="li-linha"><button type="button" class="btn-link" id="ig-reescrever">${esc(t('contact_rewrite'))}</button>
-                    <span class="li-botoes"><button type="button" class="btn btn-primary" id="ig-abrir">${esc(t('ig_open_copy'))}</button></span></div>
-                <div id="ig-aviso-passo"></div></section>
-            <p class="nota" id="ct-nota"></p>
-            <details class="contact-base" id="ct-base" hidden><summary>${esc(t('base_title'))}</summary><dl id="ct-base-lista"></dl></details>
-            <div id="ct-aviso"></div>
-            <p class="nota li-rodape">${esc(t('ig_note'))}</p>`;
-
-        const $ = (id) => corpo.querySelector('#' + id);
-        let ia = { gerado: false, modelo: null };
-        let editado = false;
-        const aviso = (html) => { $('ct-aviso').innerHTML = html; };
-        const botoes = (off) => corpo.querySelectorAll('button, textarea, select').forEach((b) => { b.disabled = off; });
-        $('ig-mensagem').addEventListener('input', () => { editado = true; });
-        const confirmarReescrever = () => !editado || confirm(t('contact_rewrite_confirm'));
-        $('ig-idioma').addEventListener('change', () => { if (confirmarReescrever()) escrever(); });
-        $('ig-reescrever').addEventListener('click', () => { if (confirmarReescrever()) escrever(); });
-
-        async function escrever() {
-            botoes(true);
-            $('ct-nota').textContent = t('contact_writing'); aviso(''); $('ig-aviso-passo').innerHTML = '';
-            try {
-                const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/instagram/rascunho`,
-                    { method: 'POST', body: JSON.stringify({ destinatario: conta.id, idioma: $('ig-idioma').value }) });
-                $('ig-mensagem').value = r.mensagem;
-                ia = { gerado: true, modelo: r.modelo }; editado = false;
-                $('ct-nota').textContent = t('contact_ai_note').replace('{m}', r.modelo.replace('claude-', ''));
-                const b = r.base, linhas = b ? [['base_fact', b.facto], ['base_opp', b.oportunidade], ['base_hyp', b.hipotese]].filter(([, v]) => v) : [];
-                $('ct-base').hidden = !linhas.length;
-                $('ct-base-lista').innerHTML = linhas.map(([k, v]) => `<dt>${esc(t(k))}</dt><dd>${esc(v)}</dd>`).join('');
-            } catch (e) {
-                $('ct-nota').textContent = '';
-                aviso(`<div class="erro-ui">${esc(e.codigo === 'IA' ? t('contact_err_ia') : e.codigo === 'LIMITE' ? t('contact_err_limit') : t('contact_error'))}</div>`);
-            }
-            botoes(false);
-        }
-
-        async function registar() {
-            const texto = $('ig-mensagem').value.trim();
-            if (!texto) { aviso(`<div class="erro-ui">${esc(t('contact_empty'))}</div>`); return; }
-            botoes(true); aviso(`<p class="nota">${esc(t('contact_saving'))}</p>`);
-            try {
-                const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/instagram/registar`, { method: 'POST',
-                    body: JSON.stringify({ destinatario: conta.id, texto, idioma: $('ig-idioma').value, ia }) });
-                corpo.innerHTML = `<div class="contact-ok"><b>${esc(t('contact_done'))}</b>${r.tarefa ? `<p>${esc(t('contact_followup').replace('{d}', dataCurta(r.tarefa.prazo)))}</p>` : ''}</div>${fecharBtn}`;
-                if (aoRegistar) aoRegistar(empresa.id);
-            } catch (e) {
-                botoes(false);
-                const txt = e.codigo === 'BLOQUEADO' && e.bloqueios?.length ? e.bloqueios.map(textoBloqueio).join(' ') : t('contact_error');
-                aviso(`<div class="erro-ui">${esc(txt)}</div>`);
-            }
-        }
-
-        // Copiar e abrir: o popup abre no próprio clique (senão o browser bloqueia); o texto vai para a área de transferência
-        $('ig-abrir').addEventListener('click', async () => {
-            const campo = $('ig-mensagem'), destino = $('ig-aviso-passo');
-            if (!campo.value.trim()) { aviso(`<div class="erro-ui">${esc(t('contact_empty'))}</div>`); return; }
-            window.open(conta.url, 'instagram_ns', 'popup,width=540,height=780,noopener,noreferrer');
-            let copiou = true;
-            try { await navigator.clipboard.writeText(campo.value); } catch { copiou = false; campo.focus(); campo.select(); }
-            destino.innerHTML = `<p class="nota li-passos">${esc(t(copiou ? 'ig_after' : 'ig_copy_fail'))}</p>
-                <div class="contact-confirmar"><b>${esc(t('li_confirm'))}</b>
-                    <button type="button" class="btn btn-primary" data-ig-sim>${esc(t('contact_sent_yes'))}</button>
-                    <button type="button" class="btn btn-secundario" data-ig-nao>${esc(t('contact_sent_no'))}</button></div>`;
-            destino.querySelector('[data-ig-nao]').addEventListener('click', () => { destino.innerHTML = ''; });
-            destino.querySelector('[data-ig-sim]').addEventListener('click', registar);
-        });
-
-        escrever();                                                      // o texto aparece logo ao abrir
-    }
-
-
-    // ---------- janela do WhatsApp (API oficial da Meta) ----------
-    // A primeira mensagem é um MODELO aprovado pela Meta, de texto fixo. O modelo é o do serviço que a análise recomenda para a
-    // empresa (ou o genérico); a IA propõe as variáveis, o utilizador revê a pré-visualização e confirma o envio.
-    // O servidor repete todas as verificações.
-    async function abrirWhatsapp(empresa, aoRegistar) {
-        const titulo = t('ws_title').replace('{empresa}', empresa.nome);
-        const fundo = document.createElement('div');
-        fundo.className = 'contact-fundo';
-        fundo.innerHTML = `<div class="contact-modal" role="dialog" aria-modal="true" aria-label="${esc(titulo)}" tabindex="-1">
-            <div class="contact-cab"><h3>${esc(titulo)}</h3>
-                <button type="button" class="contact-x" data-fechar aria-label="${esc(t('contact_close'))}">×</button></div>
-            <div class="contact-corpo" id="contact-corpo"><p class="nota">${esc(t('contact_loading'))}</p></div></div>`;
-        document.body.appendChild(fundo);
-        document.body.classList.add('modal-aberto');
-        const corpo = fundo.querySelector('#contact-corpo');
-        fundo.querySelector('.contact-modal').focus();
-
-        const fechar = () => { fundo.remove(); document.body.classList.remove('modal-aberto'); document.removeEventListener('keydown', tecla); };
-        const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
-        document.addEventListener('keydown', tecla);
-        fundo.addEventListener('click', (ev) => { if (ev.target === fundo || ev.target.closest('[data-fechar]')) fechar(); });
-        const fecharBtn = `<div class="contact-acoes"><button type="button" class="btn btn-secundario" data-fechar>${esc(t('contact_close'))}</button></div>`;
-
-        let estado;
-        try { estado = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/whatsapp`); }
-        catch { corpo.innerHTML = `<div class="erro-ui">${esc(t('contact_error'))}</div>${fecharBtn}`; return; }
-
-        if (!estado.destinatarios.length) { corpo.innerHTML = `<p>${esc(t('ws_none'))}</p>${fecharBtn}`; return; }
-        if (estado.bloqueios.length) { corpo.innerHTML = `${estado.bloqueios.map((b) => `<div class="erro-ui">${esc(textoBloqueio(b))}</div>`).join('')}${fecharBtn}`; return; }
-        if (!estado.api.configurado) { corpo.innerHTML = `<div class="erro-ui">${esc(t('ws_off'))}</div>${fecharBtn}`; return; }
-
-        const numero = estado.destinatarios[0];
-        const tipoTxt = estado.tipo === 'follow_up' ? t('contact_type_follow').replace('{n}', estado.numero - 1) : t('contact_type_first');
-        const CAMPOS = [['1', 'ws_var_1', 60], ['2', 'ws_var_2', 140], ['3', 'ws_var_3', 160]];
-        corpo.innerHTML = `
-            <p class="nota contact-tipo">${esc(tipoTxt)} · ${esc(t('ws_quota').replace('{u}', estado.limite_diario.usados).replace('{l}', estado.limite_diario.limite))}</p>
-            <p class="ig-conta"><b>${esc(t('ws_number'))}:</b> ${esc(numero.formatado)}</p>
-            <label class="campo"><span>${esc(t('contact_lang'))}</span><select id="ws-idioma">${IDIOMAS.map(([c, n]) => `<option value="${c}" ${c === estado.empresa.idioma ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-            <label class="campo"><span>${esc(t('ws_template'))}</span><select id="ws-modelo"></select></label>
-            <p class="nota" id="ws-modelo-nota"></p>
-            <section class="li-passo"><p class="nota" id="ws-hint">${esc(t('ws_hint'))}</p><p class="nota" id="ws-fixo" hidden>${esc(t('ws_fixed'))}</p>
-                ${CAMPOS.map(([n, k, max]) => `<label class="campo ws-campo"><span>${esc(t(k))}</span><input type="text" id="ws-v${n}" maxlength="${max}" autocomplete="off"></label>`).join('')}
-                <div class="ws-previa-cab">${esc(t('ws_preview'))}</div>
-                <div class="ws-previa" id="ws-previa" aria-live="polite"></div>
-                <div class="ws-botoes" id="ws-botoes"></div>
-                <div class="li-linha"><button type="button" class="btn-link" id="ws-reescrever">${esc(t('contact_rewrite'))}</button>
-                    <span class="li-botoes"><button type="button" class="btn btn-primary" id="ws-enviar">${esc(t('ws_send'))}</button></span></div>
-                <div id="ws-aviso-passo"></div></section>
-            <p class="nota" id="ct-nota"></p>
-            <details class="contact-base" id="ct-base" hidden><summary>${esc(t('base_title'))}</summary><dl id="ct-base-lista"></dl></details>
-            <div id="ct-aviso"></div>
-            <p class="nota li-rodape">${esc(t('ws_note'))}</p>`;
-
-        const $ = (id) => corpo.querySelector('#' + id);
-        let ia = { gerado: false, modelo: null };
-        let editado = false;
-        const aviso = (html) => { $('ct-aviso').innerHTML = html; };
-        const botoes = (off) => corpo.querySelectorAll('button, input, select').forEach((b) => { b.disabled = off; });
-
-        // modelos do idioma escolhido (português do Brasil para empresas do Brasil, como no servidor)
-        const chaveIdioma = () => {
-            const i = $('ws-idioma').value;
-            return i === 'pt' && estado.empresa.pais === 'BR' && estado.modelos.pt_BR ? 'pt_BR' : i;
-        };
-        const lista = () => estado.modelos[chaveIdioma()] || [];
-        const nomeDoModelo = (servico) => (servico === 'generico' ? t('ws_template_generic') : NS.servico(servico));
-        // o modelo pré-selecionado: o do serviço recomendado pela análise; senão o genérico; senão o primeiro
-        const padrao = () => { const l = lista(); return (l.find((m) => m.servico === estado.servico_recomendado) || l.find((m) => m.servico === 'generico') || l[0] || {}).servico; };
-        function preencherModelos(manter) {
-            const l = lista(), antes = manter ? $('ws-modelo').value : null;
-            $('ws-modelo').innerHTML = l.map((m) => `<option value="${esc(m.servico)}">${esc(nomeDoModelo(m.servico))}${m.servico === estado.servico_recomendado ? ` · ${esc(t('ws_template_rec'))}` : ''}</option>`).join('');
-            $('ws-modelo').value = l.some((m) => m.servico === antes) ? antes : (padrao() || '');
-            $('ws-modelo-nota').textContent = l.length ? '' : t('ws_err_template');
-            $('ws-enviar').disabled = !l.length;
-        }
-        const modeloAtual = () => lista().find((m) => m.servico === $('ws-modelo').value);
-        const valores = () => ({ 1: $('ws-v1').value, 2: $('ws-v2').value, 3: $('ws-v3').value });
-        // modelo de texto fixo (sem variáveis): não há campos para preencher nem IA; a janela mostra o texto e os botões de resposta
-        const semVariaveis = () => !!modeloAtual()?.sem_variaveis;
-        const desenharPrevia = () => {
-            const m = modeloAtual(), v = valores(), fixo = semVariaveis();
-            corpo.querySelectorAll('.ws-campo, #ws-hint').forEach((e) => { e.hidden = fixo; });
-            $('ws-reescrever').hidden = fixo;
-            $('ws-fixo').hidden = !fixo;
-            $('ws-previa').textContent = m ? m.corpo.replace(/\{\{(\d)\}\}/g, (_, n) => v[n] || `{{${n}}}`) : '';
-            $('ws-botoes').innerHTML = m?.botoes?.length ? m.botoes.map((b) => `<span class="chip">${esc(b)}</span>`).join(' ') : '';
-        };
-        CAMPOS.forEach(([n]) => $('ws-v' + n).addEventListener('input', () => { editado = true; desenharPrevia(); }));
-        const confirmarReescrever = () => !editado || confirm(t('contact_rewrite_confirm'));
-        $('ws-idioma').addEventListener('change', () => { preencherModelos(false); if (confirmarReescrever()) escrever(); else desenharPrevia(); });
-        $('ws-modelo').addEventListener('change', () => { if (confirmarReescrever()) escrever(); else desenharPrevia(); });
-        $('ws-reescrever').addEventListener('click', () => { if (confirmarReescrever()) escrever(); });
-
-        async function escrever() {
-            if (!modeloAtual() || semVariaveis()) { desenharPrevia(); $('ct-nota').textContent = ''; $('ct-base').hidden = true; return; }
-            desenharPrevia();                                                  // os campos (ou o texto fixo) aparecem já, enquanto a IA escreve
-            botoes(true);
-            $('ct-nota').textContent = t('contact_writing'); aviso(''); $('ws-aviso-passo').innerHTML = '';
-            try {
-                const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/whatsapp/rascunho`,
-                    { method: 'POST', body: JSON.stringify({ destinatario: numero.id, idioma: $('ws-idioma').value, servico: $('ws-modelo').value }) });
-                CAMPOS.forEach(([n]) => { $('ws-v' + n).value = r.variaveis[n] || ''; });
-                ia = { gerado: true, modelo: r.modeloIA }; editado = false;
-                $('ct-nota').textContent = t('contact_ai_note').replace('{m}', String(r.modeloIA).replace('claude-', ''));
-                const b = r.base, linhas = b ? [['base_fact', b.facto], ['base_opp', b.oportunidade], ['base_hyp', b.hipotese]].filter(([, v]) => v) : [];
-                $('ct-base').hidden = !linhas.length;
-                $('ct-base-lista').innerHTML = linhas.map(([k, v]) => `<dt>${esc(t(k))}</dt><dd>${esc(v)}</dd>`).join('');
-            } catch (e) {
-                $('ct-nota').textContent = '';
-                aviso(`<div class="erro-ui">${esc(e.codigo === 'IA' ? t('contact_err_ia') : e.codigo === 'LIMITE' ? t('contact_err_limit') : e.codigo === 'WA_MODELO' ? t('ws_err_template') : t('contact_error'))}</div>`);
-            }
-            botoes(false); preencherModelos(true); desenharPrevia();
-        }
-
-        // mensagem para cada erro que a API da Meta (ou o servidor) pode devolver
-        const textoErro = (e) => {
-            if (e.codigo === 'BLOQUEADO' && e.bloqueios?.length) return e.bloqueios.map(textoBloqueio).join(' ');
-            const mapa = { WA_CONFIG: 'ws_err_config', WA_SEM_WHATSAPP: 'ws_err_nowa', WA_TESTE: 'ws_err_test', WA_MODELO: 'ws_err_template', LIMITE: 'ws_err_limit', VAZIO: 'ws_err_vars', LONGO: 'ws_err_vars', CONFIG: 'ws_err_db' };
-            return t(mapa[e.codigo] || 'contact_error');
-        };
-
-        async function enviar() {
-            botoes(true); aviso(`<p class="nota">${esc(t('ws_sending'))}</p>`);
-            try {
-                const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/whatsapp/enviar`, { method: 'POST',
-                    body: JSON.stringify({ destinatario: numero.id, idioma: $('ws-idioma').value, servico: $('ws-modelo').value, variaveis: valores(), ia }) });
-                corpo.innerHTML = `<div class="contact-ok"><b>${esc(t('ws_sent'))}</b><p>${esc(t('contact_done'))}</p>${r.tarefa ? `<p>${esc(t('contact_followup').replace('{d}', dataCurta(r.tarefa.prazo)))}</p>` : ''}</div>${fecharBtn}`;
-                if (aoRegistar) aoRegistar(empresa.id);
-            } catch (e) { botoes(false); preencherModelos(true); aviso(`<div class="erro-ui">${esc(textoErro(e))}</div>`); }
-        }
-
-        // enviar daqui: pede confirmação, porque uma mensagem enviada não se pode desfazer (e tem custo)
-        $('ws-enviar').addEventListener('click', () => {
-            const v = valores();
-            if (!semVariaveis() && (!v[1].trim() || !v[2].trim() || !v[3].trim())) { aviso(`<div class="erro-ui">${esc(t('ws_err_vars'))}</div>`); return; }
-            aviso(`<div class="contact-confirmar"><b>${esc(t('ws_confirm').replace('{n}', numero.formatado))}</b>
-                <button type="button" class="btn btn-primary" id="ws-sim">${esc(t('contact_send_yes'))}</button>
-                <button type="button" class="btn btn-secundario" id="ws-nao">${esc(t('contact_cancel'))}</button></div>`);
-            $('ws-nao').addEventListener('click', () => aviso(''));
-            $('ws-sim').addEventListener('click', enviar);
-        });
-
-        preencherModelos(false);
-        desenharPrevia();
-        escrever();                                                      // as variáveis aparecem logo ao abrir
-    }
-
-    return { menu: abrirMenu, email: abrirEmail, linkedin: abrirLinkedin, instagram: abrirInstagram, whatsapp: abrirWhatsapp };
+    return { menu: abrirMenu, email: abrirEmail, linkedin: abrirLinkedin };
 })();

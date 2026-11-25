@@ -45,7 +45,6 @@ app.use('/api/auth/recover', limite(5, 60));
 app.use('/api/auth/redefine', limite(10, 15));
 app.use('/api/auth/refresh', limite(60, 15));
 app.use('/api/outreach', express.json({ limit: '1mb' }));      // só aqui: a assinatura pode levar uma imagem pequena (o resto da API mantém o limite normal)
-app.use('/api/whatsapp', express.json({ limit: '1mb', verify: (req, res, buf) => { req.rawBody = buf; } }));     // o webhook precisa do corpo em bruto para validar a assinatura da Meta
 app.use('/api/clientes', express.json({ limit: '15mb' }));      // só aqui: o contrato assinado (PDF ou imagem, até 10 MB) segue em base64
 app.use('/api/dados', express.json({ limit: '2mb' }));          // só aqui: os ficheiros CSV da importação podem ter até 2 MB
 app.use(express.json());
@@ -62,7 +61,6 @@ app.use('/api/leads', require('./routes/leads.routes'));
 app.use('/api/radar', require('./routes/radar.routes'));
 app.use('/api/outreach', require('./routes/outreach.routes'));
 app.use('/api/pipeline', require('./routes/pipeline.routes'));
-app.use('/api/whatsapp', require('./routes/whatsapp.routes'));
 app.use('/api/documentos', require('./routes/documents.routes'));
 app.use('/api/dados', require('./routes/data.routes'));
 app.use('/api/relatorios', require('./routes/reports.routes'));

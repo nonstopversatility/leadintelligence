@@ -42,8 +42,8 @@
     $('dt-separadores').addEventListener('click', (ev) => { const b = ev.target.closest('[data-sep]'); if (b) mudarSeparador(b.dataset.sep); });
 
     // ======================= IMPORTAR =======================
-    const MODELO_CSV = 'nome;site;país;idioma;setor;cidade;email;telefone;linkedin;instagram;whatsapp;contacto;cargo;email do contacto;linkedin do contacto;descrição\r\n'
-        + 'Exemplo Lda;exemplo.pt;Portugal;pt;fintech;Lisboa;ola@exemplo.pt;+351 912 345 678;linkedin.com/company/exemplo;@exemplo;+351912345678;Ana Dias;CEO;ana@exemplo.pt;linkedin.com/in/anadias;Plataforma de pagamentos para PME\r\n';
+    const MODELO_CSV = 'nome;site;país;idioma;setor;cidade;email;telefone;linkedin;contacto;cargo;email do contacto;linkedin do contacto;descrição\r\n'
+        + 'Exemplo Lda;exemplo.pt;Portugal;pt;fintech;Lisboa;ola@exemplo.pt;+351 912 345 678;linkedin.com/company/exemplo;Ana Dias;CEO;ana@exemplo.pt;linkedin.com/in/anadias;Plataforma de pagamentos para PME\r\n';
     function descarregarModelo() {
         const blob = new Blob(['﻿' + MODELO_CSV], { type: 'text/csv;charset=utf-8' });
         const url = URL.createObjectURL(blob), a = document.createElement('a');

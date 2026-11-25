@@ -1,6 +1,6 @@
 # Respostas por email
 
-O painel lê a caixa do Gmail de onde se envia (IMAP) e mostra quando um cliente responde a um email da Non Stop.
+O painel lê a caixa de email de onde se envia (`info@nonstop-versatility.pt`, por IMAP) e mostra quando um cliente responde a um email da Non Stop.
 
 ## Como funciona
 - De **3 em 3 minutos** (e 20 segundos depois de o servidor arrancar) vê as mensagens recebidas nos últimos **14 dias**.
@@ -11,8 +11,8 @@ O painel lê a caixa do Gmail de onde se envia (IMAP) e mostra quando um cliente
 - Um lead que já está noutro estado (por exemplo «proposta enviada») **mantém o estado**; a resposta regista-se na mesma.
 - **Nunca se altera a caixa**: não se marca como lida, não se move, não se apaga. A mesma mensagem **nunca se regista duas vezes**.
 
-## Respostas que envia pelo Gmail
-Se responder a um cliente **diretamente no Gmail** (fora do painel), a leitura vê também a pasta **Enviados** (seja qual for o nome, «Sent Mail», «Correio enviado»…) e regista a sua resposta na ficha do lead:
+## Respostas que envia pelo webmail
+Se responder a um cliente **diretamente no webmail** (fora do painel), a leitura vê também a pasta **Enviados** (seja qual for o nome, «Sent Mail», «Correio enviado»…) e regista a sua resposta na ficha do lead:
 - fica como **resposta nossa** (saída, tipo «resposta»), com o texto sem a citação;
 - a resposta deixa de contar como **por responder** (o número do menu desce) e a tarefa **«Dar retorno»** fecha;
 - o **estado do lead não muda** (se quiser avançá-lo, por exemplo para «Reunião agendada», faça-o na ficha).
@@ -20,12 +20,12 @@ Se responder a um cliente **diretamente no Gmail** (fora do painel), a leitura v
 O que **não** se regista: mensagens para quem ainda **não respondeu** (um primeiro email feito à mão não entra), mensagens **anteriores** à resposta do cliente, destinatários que não são contactos de leads, mensagens sem identificador e tudo o que a plataforma já enviou (reconhece-se pelo id e pela hora). A mesma mensagem nunca se regista duas vezes.
 
 ## Configuração
-Usa o `SMTP_USER` e o `SMTP_PASS` do `.env`: a palavra-passe de aplicação do Gmail serve também para ler. Não há mais nada a fazer; o IMAP do Gmail está sempre ativo. Reinicie o servidor e deve aparecer «Leitura das respostas por email ligada.» no terminal.
+Usa o `SMTP_USER` e o `SMTP_PASS` (a palavra-passe da caixa) e o `IMAP_HOST` (`mail.nonstop-versatility.pt`, porta 993). Reinicie o servidor e deve aparecer «Leitura das respostas por email ligada.» no terminal.
 
 Opcionais no `.env`:
 - `EMAIL_RESPOSTAS=0`: desliga a leitura.
 - `EMAIL_RESPOSTAS_MINUTOS` (3 por defeito) e `EMAIL_RESPOSTAS_DIAS` (14 por defeito).
-- `IMAP_HOST` / `IMAP_PORT`: só se o email **não** for do Gmail (nesse caso `IMAP_HOST` é obrigatório).
+- `IMAP_HOST` / `IMAP_PORT`: servidor de entrada; `IMAP_HOST` é obrigatório quando o email não é do Gmail.
 
 ## Notas
 - Os emails enviados **a partir de agora** guardam o identificador da mensagem. Os que foram enviados antes só se reconhecem pelo **endereço** de quem responde.
@@ -35,7 +35,7 @@ Opcionais no `.env`:
 ## API
 `GET /api/outreach/email/respostas` (estado e última verificação) e `POST /api/outreach/email/respostas/verificar` (verifica agora; admin e comercial).
 
-## Aviso de respostas por responder (email e WhatsApp)
+## Aviso de respostas por responder (email)
 - Um **número vermelho no menu «Hoje»** mostra quantas respostas de clientes estão por responder, e o **título do separador** passa a «(3) Leads…», visível mesmo com outro separador à frente.
 - Quando chega uma resposta nova, aparece um **aviso no canto do ecrã** («Nova resposta de um cliente. Abrir Hoje»), durante 9 segundos.
 - O número é o da lista **Hoje → Respostas à espera** (a última coisa no lead foi uma mensagem do cliente, há menos de 14 dias; lead em aberto; empresa fora de «Não contactar»). Desce quando se responde ao cliente.

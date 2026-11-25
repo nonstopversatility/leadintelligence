@@ -21,7 +21,7 @@ Página **Clientes** (`/assets/pages/clients.html`, menu entre «Negócios» e �
 
 - **Rascunho**: editável. **Marcar como enviado** exige as partes completas (nome, NIF, morada e representante de cada uma) e a data de início; depois de enviado já não se edita (pode **reabrir como rascunho**).
 - **Anexar contrato assinado** (PDF, PNG ou JPG até 10 MB, validado pelo conteúdo) com a data de assinatura: o contrato passa a **Assinado**. Substituir apaga o ficheiro anterior; remover volta a «enviado».
-- O envio ao cliente faz-se por fora (PDF por email ou WhatsApp): a plataforma regista o estado.
+- O envio ao cliente faz-se por fora (PDF por email): a plataforma regista o estado.
 
 ## O contrato
 

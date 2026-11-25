@@ -24,9 +24,9 @@ Sem isto, tudo funciona, mas o idioma continua a ficar só no browser (a página
 - **Acrescentar pessoas ainda não é automático:** cria a conta no Supabase (*Authentication → Users*) e acrescenta a pessoa à tabela `utilizadores`. Convites por email ficam para mais tarde.
 
 ## Integrações (só sim ou não)
-Mostra se estão configuradas a IA, o email (SMTP), o WhatsApp (API, webhook e conta business), a versão da API do WhatsApp, os 10 modelos de IA em uso e o endereço público.
+Mostra se estão configuradas a IA, o email (SMTP), os 10 modelos de IA em uso e o endereço público.
 **Nunca mostra chaves, tokens nem palavras-passe** (um teste confirma que nenhum segredo sai na resposta). Tudo isto se muda no ficheiro `.env`.
-- Se o `APP_URL` é local (`localhost`), aparece um aviso: os links de recuperação de palavra-passe e o webhook do WhatsApp precisam de um endereço público (https).
+- Se o `APP_URL` é local (`localhost`), aparece um aviso: os links de recuperação de palavra-passe e a ligação ao Google Calendar precisam de um endereço público (https).
 
 ## Limites em vigor
 Os limites diários por canal (com o nome da variável do `.env` para os mudar), os dias entre mensagens, os follow-ups, o descanso de 90 dias, os rascunhos de IA por hora e os limites de ficheiros. Só se veem; mudam-se no `.env`.

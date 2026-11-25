@@ -22,7 +22,7 @@ const TIPOS_TAREFA = ['follow_up', 'reuniao', 'proposta', 'outro'];
 const PLANEAMENTOS = ['nao_planeado', 'em_curso', 'esta_semana', 'revisao'];            // as colunas do planeador (página Tarefas)
 const google = () => require('./google-calendar.service');
 const SQL_TAREFAS = 'A base de dados ainda não está pronta para as tarefas (corra database/tasks.sql).';
-const CANAIS = ['email', 'linkedin', 'instagram', 'whatsapp', 'telefone', 'reuniao', 'nota'];
+const CANAIS = ['email', 'linkedin', 'telefone', 'reuniao', 'nota'];
 const DIRECOES = ['saida', 'entrada', 'interna'];
 const CLASSIFICACOES = ['hot', 'warm', 'cold'];
 const MAX_LEADS = 600;

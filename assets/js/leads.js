@@ -16,7 +16,7 @@
     const FECHADOS = ['proposta_recusada', 'oportunidade_perdida', 'nao_contactar'];
     const SERVICOS = ['branding', 'website', 'marketing_digital', 'redes_sociais', 'marketing_influencia', 'design_grafico'];
     const CLASSES = [['hot', 'badge_hot'], ['warm', 'badge_warm'], ['cold', 'badge_cold']];
-    const CANAIS = ['email', 'linkedin', 'instagram', 'whatsapp', 'telefone', 'reuniao', 'nota'];
+    const CANAIS = ['email', 'linkedin', 'telefone', 'reuniao', 'nota'];
     const TIPOS_TAREFA = ['follow_up', 'reuniao', 'proposta', 'outro'];
 
     // ---------- pequenos utilitários ----------
@@ -262,75 +262,25 @@
 
     async function abrirFicha(id, origem) {
         focoAnterior = origem || document.activeElement;
-        if (fichaId !== id) { respostaWa = null; textoWa = ''; baseWa = null; iaWa = null; }
+       
         fichaId = id;
         gaveta.hidden = false; fundo.hidden = false;
         document.body.classList.add('modal-aberto');
         document.addEventListener('keydown', teclaGaveta, true);
         gaveta.innerHTML = `<div class="gaveta-corpo"><p class="nota">${esc(t('loading'))}</p></div>`;
         gaveta.focus();
-        try { ficha = await api(`/api/pipeline/leads/${encodeURIComponent(id)}`); await carregarRespostaWa(id, ficha.empresas?.id); if (fichaId === id) desenharFicha(); }
+        try { ficha = await api(`/api/pipeline/leads/${encodeURIComponent(id)}`); if (fichaId === id) desenharFicha(); }
         catch { if (fichaId === id) gaveta.innerHTML = `<div class="gaveta-corpo"><div class="erro-ui">${esc(t('err_load'))}</div><button type="button" class="btn btn-secundario" data-g-fechar>${esc(t('d_close'))}</button></div>`; }
     }
-    // ---------- respostas assistidas no WhatsApp (dentro das 24 horas) ----------
-    let respostaWa = null, textoWa = '', baseWa = null, iaWa = null;
-    async function carregarRespostaWa(id, empresaId) {
-        respostaWa = null;
-        if (!empresaId || !(ficha?.interaccoes || []).some((i) => i.canal === 'whatsapp' && i.direcao === 'entrada')) return;
-        try { const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresaId)}/whatsapp/resposta`); if (fichaId === id) respostaWa = r; } catch { respostaWa = null; }
-    }
-    const duracao = (min) => (min >= 60 ? `${Math.floor(min / 60)} h ${min % 60} min` : `${min} min`);
-    function painelRespostaWa() {
-        const r = respostaWa;
-        if (!r || !r.disponivel) return '';
-        const aberta = r.janela.aberta, livre = podeEditar && aberta && !r.bloqueios.length && r.api.configurado;
-        const bolhas = r.conversa.map((m) => `<div class="wr-msg ${m.direcao === 'entrada' ? 'in' : 'out'}"><p>${esc(m.conteudo)}</p><span class="nota">${esc(dataHora(m.ocorrida_em))}</span></div>`).join('');
-        const aviso = [
-            aberta ? `<span class="chip chip-ok">${esc(t('wr_open').replace('{t}', duracao(r.janela.minutos_restantes)))}</span>` : `<span class="chip atrasada">${esc(t('wr_closed'))}</span>`,
-            ...r.bloqueios.map((b) => `<span class="chip atrasada">${esc(b.codigo === 'limite_diario' ? t('wr_limit').replace('{u}', b.usados).replace('{l}', b.limite) : t('blk_' + b.codigo))}</span>`),
-            r.api.configurado ? '' : `<span class="chip atrasada">${esc(t('wr_no_api'))}</span>`
-        ].join('');
-        const form = livre ? `<div class="g-form wr-form"><button type="button" class="btn btn-secundario" id="wr-ia">${esc(t('wr_suggest'))}</button>
-                <label class="campo"><span>${esc(t('wr_text'))}</span><textarea id="wr-texto" rows="5" maxlength="1000">${esc(textoWa)}</textarea></label>
-                <p class="nota" id="wr-base">${baseWa ? esc(t('wr_based') + ' ' + baseWa) : ''}</p>
-                <div id="wr-erro"></div>
-                <button type="button" class="btn" id="wr-enviar">${esc(t('wr_send'))}</button></div>` : (aberta ? '' : `<p class="nota">${esc(t('wr_closed_hint'))}</p>`);
-        return `<section class="g-sec"><h3>${esc(t('wr_title'))}</h3><div class="wr-estado">${aviso}</div><div class="wr-conversa">${bolhas}</div>${form}</section>`;
-    }
-    function ligarRespostaWa(id) {
-        const erroWa = (txt) => { const e = $('wr-erro'); if (e) e.innerHTML = txt ? `<div class="erro-ui" role="alert">${esc(txt)}</div>` : ''; };
-        const empresaId = ficha.empresas?.id;
-        $('wr-texto')?.addEventListener('input', (ev) => { textoWa = ev.target.value; });
-        $('wr-ia')?.addEventListener('click', async (ev) => {
-            const b = ev.currentTarget; b.disabled = true; const antes = b.textContent; b.textContent = t('wr_writing'); erroWa('');
-            try {
-                const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresaId)}/whatsapp/resposta/rascunho`, { method: 'POST', body: JSON.stringify({}) });
-                textoWa = r.texto; baseWa = r.base; iaWa = { gerado: true, modelo: r.modeloIA };
-                if (fichaId === id) desenharFicha();
-            } catch (e) { b.disabled = false; b.textContent = antes; erroWa(e.codigo === 'WA_JANELA' ? t('wr_closed_hint') : t('wr_err_draft')); }
-        });
-        $('wr-enviar')?.addEventListener('click', async (ev) => {
-            const texto = ($('wr-texto')?.value || '').trim();
-            if (!texto) { erroWa(t('wr_err_empty')); return; }
-            if (!window.confirm(t('wr_confirm').replace('{empresa}', ficha.empresas?.nome || ''))) return;
-            const b = ev.currentTarget; b.disabled = true; erroWa('');
-            try {
-                await api(`/api/outreach/empresas/${encodeURIComponent(empresaId)}/whatsapp/resposta/enviar`, { method: 'POST', body: JSON.stringify({ texto, ia: iaWa || undefined }) });
-                textoWa = ''; baseWa = null; iaWa = null; aviso(t('wr_sent'));
-                await recarregarFicha();
-            } catch (e) { b.disabled = false; erroWa(e.codigo === 'WA_JANELA' ? t('wr_closed_hint') : e.codigo === 'BLOQUEADO' ? t('wr_err_blocked') : t('wr_err_send')); }
-        });
-    }
-
     async function recarregarFicha() {
         if (!fichaId) return;
-        try { const id = fichaId; const nova = await api(`/api/pipeline/leads/${encodeURIComponent(id)}`); if (fichaId === id) { ficha = nova; await carregarRespostaWa(id, nova.empresas?.id); if (fichaId === id) desenharFicha(); } } catch { /* mantém a ficha anterior */ }
+        try { const id = fichaId; const nova = await api(`/api/pipeline/leads/${encodeURIComponent(id)}`); if (fichaId === id) { ficha = nova; if (fichaId === id) desenharFicha(); } } catch { /* mantém a ficha anterior */ }
         carregar();
     }
     const erroFicha = (txt) => { const e = $('g-erro'); if (e) e.innerHTML = txt ? `<div class="erro-ui" role="alert">${esc(txt)}</div>` : ''; };
 
     // o que mostrar a seguir ao canal: o assunto (email) ou, no LinkedIn, se foi o pedido de ligação ou a mensagem
-    const rotuloInteraccao = (i) => i.assunto || (i.resultado === 'convite_enviado' ? t('li_kind_convite') : i.resultado === 'mensagem_enviada' ? t('li_kind_mensagem') : i.resultado === 'dm_enviada' ? t('ig_kind_dm') : /^wa_/.test(i.resultado || '') ? t('ws_st_' + i.resultado.slice(3)) : '');
+    const rotuloInteraccao = (i) => i.assunto || (i.resultado === 'convite_enviado' ? t('li_kind_convite') : i.resultado === 'mensagem_enviada' ? t('li_kind_mensagem') : '');
 
     function linhaTempo() {
         const equipa = ficha.equipa;
@@ -409,7 +359,7 @@
             <div class="g-linha"><label class="campo"><span>${esc(t('lf_stage'))}</span><select id="g-estado" ${dis}>${COLUNAS.map((c) => `<option value="${c}" ${c === f.estado ? 'selected' : ''}>${esc(NS.estado(c))}</option>`).join('')}</select></label>
                 <label class="campo"><span>${esc(t('lf_owner'))}</span><select id="g-resp" ${dis}><option value="">${esc(t('lf_no_owner'))}</option>${equipa.map((u) => `<option value="${esc(u.id)}" ${u.id === f.responsavel_id ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select></label></div>
             <p>${etiqueta(f)}</p>
-            ${painelRespostaWa()}${analise}${pessoas}
+            ${analise}${pessoas}
             <section class="g-sec"><h3>${esc(t('d_tasks'))}</h3>${listaTarefas()}
                 ${podeEditar ? `<form id="g-form-tarefa" class="g-form" novalidate><h4>${esc(t('d_task_add'))}</h4>
                     <label class="campo"><span>${esc(t('d_task_title'))}</span><input type="text" id="g-tarefa-titulo" maxlength="120" required></label>
@@ -491,7 +441,6 @@
                 (res) => (res.estado === 'respondeu' && ficha?.estado === 'contactado' ? t('d_log_replied') : t('d_log_saved')));
             if (r && $('g-log-texto')) $('g-log-texto').value = '';
         });
-        ligarRespostaWa(id);
         $('g-contactar')?.addEventListener('click', (ev) => {
             const e = ficha.empresas || {};
             Contact.menu(ev.currentTarget, { id: e.id, nome: e.nome }, () => recarregarFicha());

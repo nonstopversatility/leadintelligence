@@ -67,7 +67,6 @@ async function mudarPapel(quem, id, papel) {
 function estadoIntegracoes() {
     const e = process.env;
     const email = require('./email.service');
-    const wa = require('./whatsapp.service');
     const o = require('./outreach.service');
     const la = require('./lead-analysis.service');
     const modelos = [
@@ -79,7 +78,6 @@ function estadoIntegracoes() {
     return {
         ia: { configurada: !!e.ANTHROPIC_API_KEY, modelos },
         email: { configurado: email.configurado(), servidor: e.SMTP_TESTE === 'json' ? 'teste' : (e.SMTP_HOST || 'smtp.gmail.com'), porta: parseInt(e.SMTP_PORT, 10) || 465 },
-        whatsapp: { configurado: wa.configurado(), webhook: !!(wa.ambiente.segredo() && wa.ambiente.verificacao()), waba: !!e.WHATSAPP_WABA_ID, versao_api: wa.versao() },
         endereco: { url: e.APP_URL || null, local: !e.APP_URL || /localhost|127\.0\.0\.1/.test(e.APP_URL) }
     };
 }
@@ -88,14 +86,10 @@ function estadoIntegracoes() {
 function limites() {
     const o = require('./outreach.service');
     const li = require('./linkedin.service');
-    const ig = require('./instagram.service');
-    const wa = require('./whatsapp.service');
-    const wr = require('./whatsapp-reply.service');
     const imp = require('./csv.service');
     const exp = require('./export.service');
     return {
-        diarios: [['email', o.LIMITE_DIARIO, 'EMAIL_LIMITE_DIARIO'], ['linkedin', li.LIMITE_DIARIO, 'LINKEDIN_LIMITE_DIARIO'], ['instagram', ig.LIMITE_DIARIO, 'INSTAGRAM_LIMITE_DIARIO'],
-            ['whatsapp', wa.LIMITE_DIARIO, 'WHATSAPP_LIMITE_DIARIO'], ['whatsapp_respostas', wr.LIMITE_RESPOSTAS, 'WHATSAPP_LIMITE_RESPOSTAS']].map(([canal, valor, variavel]) => ({ canal, valor, variavel })),
+        diarios: [['email', o.LIMITE_DIARIO, 'EMAIL_LIMITE_DIARIO'], ['linkedin', li.LIMITE_DIARIO, 'LINKEDIN_LIMITE_DIARIO']].map(([canal, valor, variavel]) => ({ canal, valor, variavel })),
         regras: { dias_entre_mensagens: o.DIAS_ENTRE_MENSAGENS, followups: o.MAX_FOLLOWUPS, dias_descanso: o.DIAS_DESCANSO, rascunhos_por_hora: o.RASCUNHOS_POR_HORA },
         ficheiros: { importacao_linhas: imp.MAX_LINHAS, exportacao_linhas: exp.MAX_LINHAS, leads_quadro: 600 }
     };
