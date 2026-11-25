@@ -94,6 +94,16 @@
         return `<span class="badge frio">${t('badge_cold')} · ${p}</span>`;
     }
 
+    // Quem ainda não foi contactado tem o botão «Contactar»; os outros mostram o estado e a ligação ao lead (é lá que se faz o follow-up)
+    function acaoContacto(e) {
+        if (e.contacto) {
+            const cor = e.contacto.estado === 'nao_contactar' ? 'frio' : 'novo';
+            const abrir = e.contacto.lead_id ? `<a class="link" href="/assets/pages/leads.html#lead=${encodeURIComponent(e.contacto.lead_id)}">${esc(t('ct_btn_open'))}</a>` : '';
+            return `<span class="badge ${cor}">${esc(NS.estado(e.contacto.estado))}</span>${abrir}`;
+        }
+        return podeContactar ? `<button type="button" class="btn-contactar" data-contactar="${esc(e.id)}" aria-haspopup="menu">${esc(t('contact_btn'))} <span aria-hidden="true">▾</span></button>` : '';
+    }
+
     function linha(e) {
         const detalhes = [
             e.sector ? traduzir('sector_', e.sector) : null,
@@ -122,7 +132,7 @@
                     ${origem ? `<span class="origem">${origem}</span>` : ''}
                     <button type="button" class="btn-link" data-detalhe="${esc(e.id)}" aria-expanded="${aberta}">${esc(t(aberta ? 'detail_hide' : 'detail_show'))}</button>
                 </div>
-                <div class="item-badges">${etiquetaStartup(e)}${etiquetaPontos(e.melhor_pontuacao)}${podeContactar ? `<button type="button" class="btn-contactar" data-contactar="${esc(e.id)}" aria-haspopup="menu">${esc(t('contact_btn'))} <span aria-hidden="true">▾</span></button>` : ''}</div>
+                <div class="item-badges">${etiquetaStartup(e)}${etiquetaPontos(e.melhor_pontuacao)}${acaoContacto(e)}</div>
                 ${aberta ? `<div class="detalhe">${htmlFicha(e.id)}</div>` : ''}
             </li>`;
     }

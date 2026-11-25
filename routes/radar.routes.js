@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(exigirLogin);
 
 const POR_PAGINA = 20;
+const AINDA_POR_CONTACTAR = ['novo', 'analisado'];
 
 // GET /api/radar/filtros
 // Devolve as opções dos filtros (regiões com os seus países, idiomas, sectores, serviços)
@@ -43,7 +44,7 @@ router.get('/empresas', async (req, res) => {
     const ligacao = servicoOk ? 'leads!inner' : 'leads';
     let consulta = supabaseAdmin
         .from('empresas')
-        .select(`id, nome, tipo_empresa, traducoes, website, dominio, website_estado, cidade, pais, regiao, idioma, sector, descricao, e_startup, pilares_cumpridos,
+        .select(`id, nome, tipo_empresa, traducoes, website, dominio, website_estado, cidade, pais, regiao, idioma, sector, descricao, nao_contactar, e_startup, pilares_cumpridos,
                  origem_titulo, origem_url, criado_em, ${ligacao}(id, estado, servico_interesse, pontuacao)`,
                 { count: 'exact' });
 
@@ -70,11 +71,14 @@ router.get('/empresas', async (req, res) => {
 
     if (error) return res.status(500).json({ erro: 'Não foi possível pesquisar as empresas.' });
 
-    // Cada empresa mostra a melhor pontuação entre os seus leads
+    // Cada empresa mostra a melhor pontuação entre os seus leads.
+    // Se já houve contacto (algum lead passou de «novo»/«analisado»), o Radar mostra o estado em vez do botão «Contactar».
     const empresas = data.map(({ leads, ...empresa }) => {
         const pontos = leads.map((l) => l.pontuacao).filter((p) => p != null);
+        const contactado = leads.find((l) => !AINDA_POR_CONTACTAR.includes(l.estado));
         return {
             ...empresa,
+            contacto: empresa.nao_contactar ? { estado: 'nao_contactar', lead_id: contactado?.id || null } : contactado ? { estado: contactado.estado, lead_id: contactado.id } : null,
             melhor_pontuacao: pontos.length ? Math.max(...pontos) : null,
             leads: leads.length
         };
