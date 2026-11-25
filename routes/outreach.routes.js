@@ -11,7 +11,8 @@ router.use(exigirLogin);
 
 // Traduz os erros do serviço em respostas HTTP. Os detalhes técnicos ficam no servidor, nunca vão para o browser.
 function responderErro(res, erro) {
-    const estados = { NAO_ENCONTRADA: 404, DESTINATARIO: 400, VAZIO: 400, INVALIDO: 400, LONGO: 400, BLOQUEADO: 409, LIMITE: 429, SMTP: 503, CONFIG: 503 };
+    const estados = { NAO_ENCONTRADA: 404, DESTINATARIO: 400, VAZIO: 400, INVALIDO: 400, LONGO: 400, BLOQUEADO: 409, LIMITE: 429, SMTP: 503, SMTP_REDE: 502, SMTP_AUTH: 502, SMTP_ENVIO: 502, CONFIG: 503 };
+    if (/^SMTP_/.test(erro.codigo || '')) console.error('Envio de email:', erro.message);            // para se ver no registo do servidor
     if (estados[erro.codigo]) return res.status(estados[erro.codigo]).json({ erro: traduzir(erro.message, res.locals.idioma), codigo: erro.codigo, bloqueios: erro.bloqueios });
     console.error('Erro na central de contacto:', erro.message);
     const ia = /credit balance|api[_ ]key|anthropic|overloaded|rate/i.test(erro.message);

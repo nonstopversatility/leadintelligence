@@ -8,7 +8,7 @@
 //   SMTP_USER     o endereço de onde se envia (ex.: nome@gmail.com)
 //   SMTP_PASS     a palavra-passe de aplicação (NÃO a palavra-passe normal da conta)
 //   SMTP_HOST     por defeito smtp.gmail.com
-//   SMTP_PORT     por defeito 465
+//   SMTP_PORT     por defeito 465 (no Render gratuito as portas 25, 465 e 587 estão bloqueadas: usar a 26, se o servidor a tiver)
 //   SMTP_NOME     nome mostrado a quem recebe (por defeito, o nome do utilizador)
 //   SMTP_TESTE    "json": não envia nada, só monta a mensagem (para testes)
 
@@ -17,17 +17,31 @@ const sanitizeHtml = require('sanitize-html');
 
 const configurado = () => !!(process.env.SMTP_TESTE === 'json' || (process.env.SMTP_USER && process.env.SMTP_PASS));
 
+// Porta 465: TLS desde o início. Outras portas (587, 26...): começam em claro e TÊM de passar a TLS antes de enviar a palavra-passe.
+// Prazos curtos: se o servidor de email não responder, o utilizador sabe em segundos (em vez de esperar minutos).
+function opcoesTransporte() {
+    const porta = parseInt(process.env.SMTP_PORT, 10) || 465;
+    return {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com', port: porta, secure: porta === 465, requireTLS: porta !== 465,
+        connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 45000,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    };
+}
+
+// Que falha foi? SMTP_AUTH: credenciais recusadas. SMTP_REDE: nem se chegou a ligar (nada foi enviado).
+// SMTP_ENVIO: falhou a meio (convém confirmar antes de repetir).
+function classificarErro(e) {
+    if (e?.code === 'EAUTH') return 'SMTP_AUTH';
+    if (e?.command === 'CONN' || ['EDNS', 'ECONNECTION', 'ECONNREFUSED', 'ETLS'].includes(e?.code)) return 'SMTP_REDE';
+    return 'SMTP_ENVIO';
+}
+
 let transporte = null;
 function obterTransporte() {
     if (!transporte) {
         transporte = process.env.SMTP_TESTE === 'json'
             ? nodemailer.createTransport({ jsonTransport: true })
-            : nodemailer.createTransport({
-                host: process.env.SMTP_HOST || 'smtp.gmail.com',
-                port: parseInt(process.env.SMTP_PORT, 10) || 465,
-                secure: (parseInt(process.env.SMTP_PORT, 10) || 465) === 465,
-                auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-            });
+            : nodemailer.createTransport(opcoesTransporte());
     }
     return transporte;
 }
@@ -125,8 +139,10 @@ function montarMensagem({ para, assunto, corpo, html, nomeRemetente, respostaPar
 async function enviar(dados) {
     if (!configurado()) throw new Error('O envio direto não está configurado (faltam SMTP_USER e SMTP_PASS no .env).');
     const mensagem = montarMensagem(dados);
-    const r = await obterTransporte().sendMail(mensagem);
+    let r;
+    try { r = await obterTransporte().sendMail(mensagem); }
+    catch (e) { throw Object.assign(new Error(`Falha no envio (SMTP ${process.env.SMTP_HOST || 'smtp.gmail.com'}:${process.env.SMTP_PORT || 465}): ${e.message}`), { codigo: classificarErro(e) }); }
     return { id: r.messageId || null, mensagem };
 }
 
-module.exports = { configurado, montarMensagem, enviar, umaLinha, sanitizar, htmlParaTexto, imagensParaAnexos };
+module.exports = { opcoesTransporte, classificarErro, configurado, montarMensagem, enviar, umaLinha, sanitizar, htmlParaTexto, imagensParaAnexos };

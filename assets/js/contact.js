@@ -1,7 +1,7 @@
 /* contact.js: botão "Contact", menu de canais e janela de email (usado pelo Radar).
    Canais: Email e LinkedIn.
    Fluxo do email: escolher destinatário -> a IA escreve o rascunho -> o utilizador revê ->
-   envia daqui (se o SMTP estiver ligado) ou abre no seu email / caixa de entrada / copia -> confirma -> fica registado. */
+   envia daqui (se o SMTP estiver ligado) ou abre a caixa de entrada / copia -> confirma -> fica registado. */
 
 const Contact = (() => {
     const { api, esc } = NS;
@@ -11,6 +11,7 @@ const Contact = (() => {
         { id: 'linkedin', nome: 'LinkedIn', ativo: true, icone: '<path d="M6 9v10M6 5.5v.01M10 19v-6a3 3 0 0 1 6 0v6M10 12v7"/>' }
     ];
     const CAIXA_ENTRADA = 'https://webmail.nonstop-versatility.pt/';     // o webmail da empresa
+    const ERROS_ENVIO = { SMTP_REDE: 'contact_err_smtp_net', SMTP_AUTH: 'contact_err_smtp_auth', SMTP_ENVIO: 'contact_err_smtp_unsure' };
     const IDIOMAS = [['en', 'English'], ['pt', 'Português'], ['es', 'Español']];
 
     // ---------- editor com formatação ----------
@@ -311,7 +312,6 @@ const Contact = (() => {
             <div id="ct-aviso"></div>
             <div class="contact-acoes" id="ct-acoes">
                 ${estado.smtp ? `<button type="button" class="btn btn-primary" id="ct-enviar">${esc(t('contact_send'))}</button>` : ''}
-                <button type="button" class="btn btn-secundario" id="ct-mailto">${esc(t('contact_mailto'))}</button>
                 <button type="button" class="btn btn-secundario" id="ct-caixa">${esc(t('contact_inbox'))}</button>
                 <button type="button" class="btn btn-secundario" id="ct-copiar">${esc(t('contact_copy'))}</button>
                 <button type="button" class="btn-link" id="ct-reescrever">${esc(t('contact_rewrite'))}</button>
@@ -429,7 +429,7 @@ const Contact = (() => {
 
         async function registar(metodo, caminho = 'registar') {
             const m = mensagemPronta(); if (!m) return;
-            botoes(true); aviso(`<p class="nota">${esc(t('contact_saving'))}</p>`);
+            botoes(true); aviso(`<p class="nota">${esc(t(caminho === 'enviar' ? 'contact_sending' : 'contact_saving'))}</p>`);
             try {
                 const r = await api(`/api/outreach/empresas/${encodeURIComponent(empresa.id)}/email/${caminho}`, { method: 'POST',
                     // só o envio direto leva a formatação (HTML); nos outros, o utilizador envia texto simples a partir do seu programa
@@ -439,16 +439,11 @@ const Contact = (() => {
                 if (aoRegistar) aoRegistar(empresa.id);
             } catch (e) {
                 botoes(false);
-                const txt = e.codigo === 'BLOQUEADO' && e.bloqueios?.length ? e.bloqueios.map(textoBloqueio).join(' ') : e.codigo === 'SMTP' ? t('contact_smtp_off') : t('contact_error');
+                const txt = e.codigo === 'BLOQUEADO' && e.bloqueios?.length ? e.bloqueios.map(textoBloqueio).join(' ') : e.codigo === 'SMTP' ? t('contact_smtp_off') : ERROS_ENVIO[e.codigo] ? t(ERROS_ENVIO[e.codigo]) : t('contact_error');
                 aviso(`<div class="erro-ui">${esc(txt)}</div>`);
             }
         }
 
-        $('ct-mailto')?.addEventListener('click', () => {
-            const m = mensagemPronta(); if (!m) return;
-            location.href = `mailto:${encodeURIComponent(m.para)}?subject=${encodeURIComponent(m.assunto)}&body=${encodeURIComponent(m.texto)}`;
-            perguntarSeEnviou('mailto');
-        });
         // O webmail não deixa pré-preencher a mensagem: copia-se o texto, abre-se a caixa de entrada e o utilizador cola
         $('ct-caixa')?.addEventListener('click', async () => {
             const m = mensagemPronta(); if (!m) return;
