@@ -257,7 +257,7 @@ const Contact = (() => {
         const fechar = () => { fundo.remove(); document.body.classList.remove('modal-aberto'); document.removeEventListener('keydown', tecla); };
         const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
         document.addEventListener('keydown', tecla);
-        fundo.addEventListener('click', (ev) => { if (ev.target === fundo || ev.target.closest('[data-fechar]')) fechar(); });
+        fundo.addEventListener('click', (ev) => { if (ev.target.closest('[data-fechar]')) fechar(); });      // clicar fora não fecha (perdia-se o que se escreveu)
 
         const mostrarErro = (e) => { corpo.innerHTML = `<div class="erro-ui">${esc(e.codigo === 'IA' ? t('contact_err_ia') : t('contact_error'))}</div>`; };
 
@@ -490,7 +490,7 @@ const Contact = (() => {
         const fechar = () => { fundo.remove(); document.body.classList.remove('modal-aberto'); document.removeEventListener('keydown', tecla); };
         const tecla = (ev) => { if (ev.key === 'Escape') fechar(); };
         document.addEventListener('keydown', tecla);
-        fundo.addEventListener('click', (ev) => { if (ev.target === fundo || ev.target.closest('[data-fechar]')) fechar(); });
+        fundo.addEventListener('click', (ev) => { if (ev.target.closest('[data-fechar]')) fechar(); });      // clicar fora não fecha (perdia-se o que se escreveu)
         const fecharBtn = `<div class="contact-acoes"><button type="button" class="btn btn-secundario" data-fechar>${esc(t('contact_close'))}</button></div>`;
 
         let estado;

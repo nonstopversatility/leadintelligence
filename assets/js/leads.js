@@ -173,7 +173,6 @@
             const fechar = (valor) => { document.removeEventListener('keydown', tecla, true); fundo.remove(); caixa.remove(); document.body.classList.remove('modal-aberto'); resolver(valor); };
             const tecla = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(null); } };
             document.addEventListener('keydown', tecla, true);
-            fundo.addEventListener('click', () => fechar(null));
             caixa.addEventListener('click', (ev) => { if (ev.target.closest('[data-cancelar]')) fechar(null); });
             caixa.querySelector('form').addEventListener('submit', (ev) => {
                 ev.preventDefault();
@@ -448,7 +447,6 @@
     }
 
     gaveta.addEventListener('click', (ev) => { if (ev.target.closest('[data-g-fechar]')) fecharFicha(); });
-    fundo.addEventListener('click', fecharFicha);
 
     // ---------- arranque ----------
     I18N.aoMudar(() => { montarFiltros(); desenhar(); if (fichaId && ficha) desenharFicha(); });

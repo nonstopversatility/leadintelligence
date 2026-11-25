@@ -340,7 +340,6 @@
         }, 300);
     });
     modal.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && ev.target.matches('[data-empresa]')) ev.target.click(); });
-    fundo.addEventListener('click', fecharModal);
 
     // ---------- a barra ----------
     $('tk-barra').addEventListener('click', async (ev) => {

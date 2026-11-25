@@ -415,7 +415,6 @@
         const fechar = () => { document.removeEventListener('keydown', tecla, true); fundo.remove(); caixa.remove(); document.body.classList.remove('modal-aberto'); if (foco && document.contains(foco)) foco.focus(); };
         const tecla = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); fechar(); } };
         document.addEventListener('keydown', tecla, true);
-        fundo.addEventListener('click', fechar);
         caixa.addEventListener('click', (ev) => { if (ev.target.closest('[data-fechar]')) fechar(); });
         const erroAnx = (txt) => { caixa.querySelector('#anx-erro').innerHTML = txt ? `<div class="erro-ui" role="alert">${esc(txt)}</div>` : ''; };
         caixa.querySelector('form').addEventListener('submit', async (ev) => {
