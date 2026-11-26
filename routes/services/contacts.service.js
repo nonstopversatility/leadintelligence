@@ -42,4 +42,46 @@ async function adicionarContacto(empresaId, dados) {
     return { id: data.id, nome: data.nome, email_estado };
 }
 
-module.exports = { adicionarContacto, validarContacto };
+// Que canais mudam numa pessoa que já está na ficha (função pura). Um campo que não vem no pedido fica como está;
+// um campo apagado no formulário apaga o valor. Só se valida o que foi mesmo alterado.
+function validarCanais(actual, dados = {}) {
+    const alterar = {};
+    const canais = [
+        ['email', 'email', 200, normalizarEmail, 'EMAIL', 'O email não é válido.'],
+        ['linkedin', 'linkedin_url', 300, linkedin.urlPerfil, 'LINKEDIN', 'O LinkedIn tem de ser o perfil da pessoa (linkedin.com/in/…).']
+    ];
+    for (const [campo, coluna, max, normalizar, codigo, mensagem] of canais) {
+        if (dados[campo] === undefined) continue;
+        const bruto = limpar(dados[campo], max);
+        if (bruto === (actual[coluna] || '')) continue;
+        const valor = bruto ? normalizar(bruto) : null;
+        if (bruto && !valor) throw erro(codigo, mensagem);
+        if (valor !== (actual[coluna] || null)) alterar[coluna] = valor;
+    }
+    const final = { ...actual, ...alterar };
+    if (!final.email && !final.linkedin_url) throw erro('CANAL', 'Indique o email ou o LinkedIn.');
+    return alterar;
+}
+
+// Completa ou corrige o email e o LinkedIn de uma pessoa da empresa (por exemplo, identificada pela IA no site).
+// O nome, o cargo e a fonte não mudam; a alteração fica no histórico como "manual".
+async function completarContacto(empresaId, pessoaId, dados) {
+    const { data: pessoa, error: ePessoa } = await supabaseAdmin.from('decisores')
+        .select('id, nome, email, linkedin_url, nao_contactar').eq('id', pessoaId).eq('empresa_id', empresaId).maybeSingle();
+    if (ePessoa) throw new Error(ePessoa.message);
+    if (!pessoa) throw erro('NAO_ENCONTRADA', 'Pessoa não encontrada.');
+    if (pessoa.nao_contactar) throw erro('NAO_CONTACTAR', 'Esta pessoa pediu para não ser contactada.');
+
+    const alterar = validarCanais(pessoa, dados);
+    if (alterar.email !== undefined) alterar.email_estado = alterar.email ? await validarEmail(alterar.email).catch(() => null) : null;
+    if (Object.keys(alterar).length) {
+        const { error } = await supabaseAdmin.from('decisores').update({ ...alterar, ultima_origem: 'manual' }).eq('id', pessoa.id);
+        if (error) {
+            if (error.code === '23505') throw erro('DUPLICADO', 'Já existe um contacto com este email ou LinkedIn.');
+            throw new Error(error.message);
+        }
+    }
+    return { id: pessoa.id, nome: pessoa.nome, email_estado: alterar.email_estado ?? null };
+}
+
+module.exports = { adicionarContacto, completarContacto, validarContacto, validarCanais };

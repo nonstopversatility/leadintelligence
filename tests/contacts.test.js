@@ -5,7 +5,7 @@ process.env.SUPABASE_PUBLIC_KEY ||= 'teste';
 process.env.SUPABASE_SECRET_KEY ||= 'teste';
 const test = require('node:test');
 const assert = require('node:assert');
-const { validarContacto } = require('../routes/services/contacts.service');
+const { validarContacto, validarCanais } = require('../routes/services/contacts.service');
 
 const falha = (dados, codigo) => assert.throws(() => validarContacto(dados), (e) => e.codigo === codigo);
 
@@ -28,4 +28,19 @@ test('recusa dados em falta ou mal escritos', () => {
     falha({ nome: 'Ana', email: 'ana@' }, 'EMAIL');
     falha({ nome: 'Ana', linkedin: 'https://linkedin.com/company/exemplo' }, 'LINKEDIN');
     falha({ nome: 'Ana', linkedin: 'javascript:alert(1)' }, 'LINKEDIN');
+});
+
+test('completar uma pessoa já identificada: só muda o que foi alterado', () => {
+    const actual = { email: null, linkedin_url: 'https://linkedin.com/in/ana' };
+    assert.deepStrictEqual(validarCanais(actual, { email: 'ANA@Exemplo.pt', linkedin: actual.linkedin_url }), { email: 'ana@exemplo.pt' });
+    assert.deepStrictEqual(validarCanais(actual, { email: 'ana@exemplo.pt' }), { email: 'ana@exemplo.pt' });
+    assert.deepStrictEqual(validarCanais(actual, { email: '', linkedin: actual.linkedin_url }), {});
+});
+
+test('completar uma pessoa: apagar um canal só é aceite se ficar outro', () => {
+    const actual = { email: 'ana@exemplo.pt', linkedin_url: 'https://linkedin.com/in/ana' };
+    assert.deepStrictEqual(validarCanais(actual, { email: '', linkedin: actual.linkedin_url }), { email: null });
+    assert.throws(() => validarCanais(actual, { email: '', linkedin: '' }), (e) => e.codigo === 'CANAL');
+    assert.throws(() => validarCanais(actual, { email: 'ana@' }), (e) => e.codigo === 'EMAIL');
+    assert.throws(() => validarCanais(actual, { linkedin: 'https://linkedin.com/company/exemplo' }), (e) => e.codigo === 'LINKEDIN');
 });

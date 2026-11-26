@@ -4,7 +4,7 @@ const { exigirLogin, exigirPapel } = require('../middleware/auth.middleware');
 const { REGIOES, IDIOMAS, SECTORES, SERVICOS } = require('./services/radar.catalog');
 const { CONECTORES } = require('./services/connectors');
 const { calcularPrioridade } = require('./services/priority.service');
-const { adicionarContacto } = require('./services/contacts.service');
+const { adicionarContacto, completarContacto } = require('./services/contacts.service');
 const { iniciarRecolha, LIMITE_POR_DEFEITO, LIMITE_MAXIMO } = require('./services/radar.pipeline');
 
 const router = express.Router();
@@ -145,7 +145,22 @@ router.post('/empresas/:id/contactos', exigirPapel('admin', 'comercial'), async 
     }
 });
 
-// POST /api/radar/recolher  corpo (opcional): { "limite": 40, "conectores": ["hacker_news"] }
+// PATCH /api/radar/empresas/:id/contactos/:pessoaId  corpo: { email, linkedin }
+// Completa os dados de contacto de uma pessoa que já está na ficha.
+router.patch('/empresas/:id/contactos/:pessoaId', exigirPapel('admin', 'comercial'), async (req, res) => {
+    const { id, pessoaId } = req.params;
+    if (![id, pessoaId].every((v) => /^[0-9a-f-]{36}$/i.test(v))) return res.status(400).json({ erro: 'Identificador inválido.' });
+    try {
+        res.json(await completarContacto(id, pessoaId, req.body || {}));
+    } catch (erro) {
+        const estado = { CANAL: 400, EMAIL: 400, LINKEDIN: 400, NAO_ENCONTRADA: 404, DUPLICADO: 409, NAO_CONTACTAR: 409 }[erro.codigo];
+        if (estado) return res.status(estado).json({ erro: erro.message, codigo: erro.codigo });
+        console.error('Erro ao completar um contacto:', erro.message);
+        res.status(500).json({ erro: 'Não foi possível guardar o contacto.' });
+    }
+});
+
+// POST /api/radar/recolher corpo (opcional): { "limite": 40, "conectores": ["hacker_news"] }
 // Inicia uma recolha em segundo plano e responde logo com o id (o browser vai vendo o progresso).
 // Só admin e comercial podem lançar recolhas (cada uma gasta chamadas à Claude).
 router.post('/recolher', exigirPapel('admin', 'comercial'), async (req, res) => {

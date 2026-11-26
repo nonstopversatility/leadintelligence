@@ -302,6 +302,7 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 400; letter-spacing: -
 .decisores li { padding: 8px 0; border-top: 1px solid var(--line); }
 .decisores li:first-child { border-top: 0; }
 .novo-contacto { margin: 8px 0 14px; }
+.decisores .novo-contacto { margin: 4px 0 0; font-size: .82rem; }
 .novo-contacto summary { cursor: pointer; font-weight: 600; color: var(--brand); }
 .novo-contacto form { margin-top: 12px; max-width: 640px; }
 .nc-grelha { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }

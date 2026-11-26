@@ -158,6 +158,7 @@
                 <li>
                     <div><b>${esc(d.nome)}</b> <span class="nota">${esc(d.cargo || '')}</span> <span class="badge novo">${esc(t('cat_' + d.categoria))}</span>${d.nao_contactar ? ` <span class="badge frio">${esc(t('detail_dnc'))}</span>` : ''}</div>
                     <div class="nota">${[ligacao(d.linkedin_url, 'LinkedIn'), d.email ? esc(d.email) : '', (d.fonte_url === 'manual' ? esc(t('nc_manual')) : ligacao(d.fonte_url, t('detail_source'))) + ' · ' + esc(new Date(d.recolhido_em).toLocaleDateString(I18N.locale()))].filter(Boolean).join(' · ')}</div>
+                    ${htmlEditarContacto(id, d)}
                 </li>`).join('')}</ul>`
             // sem o site lido não se pode dizer que ele "não nomeia ninguém"
             : (f.enriquecida_em ? `<p class="nota">${esc(t('detail_no_people'))}</p>` : '');
@@ -179,25 +180,33 @@
                 ${htmlHistorico(f.historico || [])}`;
     }
 
-    // ---------- acrescentar um contacto à mão ----------
-    const novos = new Map();             // por empresa: o que está escrito no formulário (sobrevive a redesenhar a lista)
+    // ---------- acrescentar um contacto à mão, ou completar o de uma pessoa já identificada ----------
+    const novos = new Map();             // por empresa ou pessoa: o que está escrito no formulário (sobrevive a redesenhar a lista)
     const CAMPOS_CONTACTO = [['nome', 'nc_name', 'text', 90], ['cargo', 'nc_role', 'text', 90], ['email', 'nc_email', 'email', 200], ['linkedin', 'nc_linkedin', 'text', 300]];
+    const CAMPOS_CANAIS = CAMPOS_CONTACTO.slice(2);
 
-    function htmlNovoContacto(id) {
-        if (!podeContactar) return '';
-        const n = novos.get(id) || { valores: {} };
-        const campos = CAMPOS_CONTACTO.map(([nome, chave, tipo, max]) => `<label class="campo"><span>${esc(t(chave))}</span>
-            <input type="${tipo}" name="${nome}" maxlength="${max}" autocomplete="off" value="${esc(n.valores[nome] || '')}"${nome === 'nome' ? ' required' : ''}${nome === 'linkedin' ? ' placeholder="linkedin.com/in/…"' : ''}></label>`).join('');
+    // pessoa = null: formulário de um contacto novo; senão, o email e o LinkedIn dessa pessoa, já preenchidos com o que há
+    function htmlFormContacto(empresaId, pessoa, titulo) {
+        const chave = pessoa ? pessoa.id : empresaId;
+        const n = novos.get(chave) || { valores: {} };
+        const actuais = pessoa ? { email: pessoa.email, linkedin: pessoa.linkedin_url } : {};
+        const campos = (pessoa ? CAMPOS_CANAIS : CAMPOS_CONTACTO).map(([nome, rotulo, tipo, max]) => `<label class="campo"><span>${esc(t(rotulo))}</span>
+            <input type="${tipo}" name="${nome}" maxlength="${max}" autocomplete="off" value="${esc(n.valores[nome] ?? actuais[nome] ?? '')}"${nome === 'nome' ? ' required' : ''}${nome === 'linkedin' ? ' placeholder="linkedin.com/in/…"' : ''}></label>`).join('');
         const estado = n.erro ? `<div class="erro-ui" role="alert">${esc(t(n.erro))}</div>` : n.ok ? `<p class="nota" role="status">${esc(t(n.ok))}</p>` : '';
-        return `<details class="novo-contacto" data-novo="${esc(id)}"${n.aberto ? ' open' : ''}><summary>+ ${esc(t('nc_add'))}</summary>
-            <form data-contacto="${esc(id)}" novalidate><div class="nc-grelha">${campos}</div><p class="nota">${esc(t('nc_hint'))}</p>${estado}
+        return `<details class="novo-contacto" data-novo="${esc(chave)}"${n.aberto ? ' open' : ''}><summary>${esc(titulo)}</summary>
+            <form data-contacto="${esc(empresaId)}"${pessoa ? ` data-pessoa="${esc(pessoa.id)}"` : ''} novalidate><div class="nc-grelha">${campos}</div><p class="nota">${esc(t(pessoa ? 'nc_edit_hint' : 'nc_hint'))}</p>${estado}
                 <button type="submit" class="btn btn-secundario"${n.aGravar ? ' disabled' : ''}>${esc(t('nc_save'))}</button></form></details>`;
     }
-    const rascunho = (id) => novos.get(id) || novos.set(id, { valores: {} }).get(id);
+    const htmlNovoContacto = (id) => (podeContactar ? htmlFormContacto(id, null, '+ ' + t('nc_add')) : '');
+    // quem pediu para não ser contactado não recebe mais dados
+    const htmlEditarContacto = (id, d) => (podeContactar && !d.nao_contactar
+        ? htmlFormContacto(id, d, d.email && d.linkedin_url ? t('nc_edit') : '+ ' + t('nc_complete'))
+        : '');
+    const rascunho = (chave) => novos.get(chave) || novos.set(chave, { valores: {} }).get(chave);
 
     $('radar-lista').addEventListener('input', (ev) => {
         const form = ev.target.closest('form[data-contacto]');
-        if (form) rascunho(form.dataset.contacto).valores[ev.target.name] = ev.target.value;
+        if (form) rascunho(form.dataset.pessoa || form.dataset.contacto).valores[ev.target.name] = ev.target.value;
     });
     // "toggle" não sobe na árvore: apanha-se na fase de captura
     $('radar-lista').addEventListener('toggle', (ev) => {
@@ -210,13 +219,14 @@
         const form = ev.target.closest('form[data-contacto]');
         if (!form) return;
         ev.preventDefault();
-        const id = form.dataset.contacto, n = rascunho(id);
+        const id = form.dataset.contacto, pessoa = form.dataset.pessoa, n = rascunho(pessoa || id);
         if (n.aGravar) return;
         n.valores = Object.fromEntries(new FormData(form));
         Object.assign(n, { aberto: true, aGravar: true, erro: null, ok: null });
         desenharResultados();
         try {
-            const r = await api(`/api/radar/empresas/${encodeURIComponent(id)}/contactos`, { method: 'POST', body: JSON.stringify(n.valores) });
+            const destino = `/api/radar/empresas/${encodeURIComponent(id)}/contactos${pessoa ? '/' + encodeURIComponent(pessoa) : ''}`;
+            const r = await api(destino, { method: pessoa ? 'PATCH' : 'POST', body: JSON.stringify(n.valores) });
             Object.assign(n, { valores: {}, ok: r.email_estado === 'sem_mx' || r.email_estado === 'invalido' ? 'nc_saved_nomx' : 'nc_saved' });
             try { fichas.set(id, await api('/api/radar/empresas/' + encodeURIComponent(id))); } catch { fichas.delete(id); abertos.delete(id); }
         } catch (e) { n.erro = ERROS_CONTACTO[e.codigo] || 'nc_err'; }
