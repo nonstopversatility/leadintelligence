@@ -159,11 +159,15 @@
                     <div><b>${esc(d.nome)}</b> <span class="nota">${esc(d.cargo || '')}</span> <span class="badge novo">${esc(t('cat_' + d.categoria))}</span>${d.nao_contactar ? ` <span class="badge frio">${esc(t('detail_dnc'))}</span>` : ''}</div>
                     <div class="nota">${[ligacao(d.linkedin_url, 'LinkedIn'), d.email ? esc(d.email) : '', (d.fonte_url === 'manual' ? esc(t('nc_manual')) : ligacao(d.fonte_url, t('detail_source'))) + ' · ' + esc(new Date(d.recolhido_em).toLocaleDateString(I18N.locale()))].filter(Boolean).join(' · ')}</div>
                 </li>`).join('')}</ul>`
-            : `<p class="nota">${esc(t('detail_no_people'))}</p>`;
+            // sem o site lido não se pode dizer que ele "não nomeia ninguém"
+            : (f.enriquecida_em ? `<p class="nota">${esc(t('detail_no_people'))}</p>` : '');
 
         const blocoPessoas = `<div class="ficha-linha"><b>${esc(t('detail_people'))}</b></div>${pessoas}${htmlNovoContacto(id)}`;
-        // ficha ainda por enriquecer: avisa, mas mostra as pessoas e deixa acrescentar
-        if (!f.enriquecida_em) return `<p class="nota">${esc(t('detail_pending'))}</p>${blocoPessoas}`;
+        // ficha por enriquecer: diz porquê (depende do estado do site), mas mostra as pessoas e deixa acrescentar
+        if (!f.enriquecida_em) {
+            const motivo = ['rejeitado', 'inacessivel', 'nao_encontrado', 'verificado'].includes(f.website_estado) ? f.website_estado : 'por_verificar';
+            return `<p class="nota">${esc(t('detail_pending_' + motivo))}</p>${blocoPessoas}`;
+        }
 
         return `${htmlAnalise(f)}
                 ${campo('detail_type', f.tipo_empresa ? `${esc(t('tipo_' + f.tipo_empresa))}${f.tipo_motivo ? ` <span class="nota">· ${esc(texto(f, 'tipo_motivo'))}</span>` : ''}` : '')}
